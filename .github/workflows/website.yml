@@ -1,0 +1,60 @@
+name: Website
+
+on:
+  push:
+    paths:
+      - "tools/website/**"
+      - "tools/web-debugger/web/**"
+      - "demo/daw/**"
+      - "flake.nix"
+      - "flake.lock"
+      - "shell.nix"
+      - "include/**"
+      - "src/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - "doc/**"
+      - "GLOSSARY.md"
+      - "LICENSE.md"
+      - ".github/workflows/website.yml"
+  pull_request:
+    paths:
+      - "tools/website/**"
+      - "tools/web-debugger/web/**"
+      - "demo/daw/**"
+      - "flake.nix"
+      - "flake.lock"
+      - "shell.nix"
+      - "include/**"
+      - "src/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - "doc/**"
+      - "GLOSSARY.md"
+      - "LICENSE.md"
+      - ".github/workflows/website.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Website build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31.11.3
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Build landing page and docs
+        run: nix develop .#ci -c bash -c 'cd tools/website && npm ci && npm run build'

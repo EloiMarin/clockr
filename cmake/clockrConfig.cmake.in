@@ -1,0 +1,16 @@
+@PACKAGE_INIT@
+
+# clockrConfig.cmake — entry point for find_package(clockr CONFIG).
+#
+# The package is self-contained: tlsf is compiled into clockr_mem and the
+# moodycamel/readerwriterqueue headers are bundled under
+# <prefix>/include/clockr/third_party/, so there is nothing else to find.
+# Linking any target below pulls in include dirs, the C++20 requirement, and
+# the rest of the link closure automatically:
+#
+#   find_package(clockr 0.1 CONFIG REQUIRED)
+#   target_link_libraries(app PRIVATE clockr::clockr)
+
+include("${CMAKE_CURRENT_LIST_DIR}/clockrTargets.cmake")
+
+check_required_components(clockr)

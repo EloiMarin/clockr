@@ -1,0 +1,45 @@
+{
+  "name": "clockr-debug-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dependency-free TypeScript client for the clockr debug WebSocket protocol (clockr.debug.v1): live trace subscription, history replay, and tick-boundary input injection",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./codec": {
+      "types": "./src/schema.ts",
+      "import": "./src/schema.ts"
+    },
+    "./types": {
+      "types": "./src/types.ts",
+      "import": "./src/types.ts"
+    },
+    "./value": {
+      "types": "./src/value.ts",
+      "import": "./src/value.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node test/codec.test.ts && node test/sync.test.ts && node test/client.test.ts",
+    "test:codec": "node test/codec.test.ts",
+    "test:sync": "node test/sync.test.ts",
+    "test:client": "node test/client.test.ts",
+    "test:e2e": "node test/e2e.test.ts",
+    "test:all": "node test/codec.test.ts && node test/sync.test.ts && node test/client.test.ts && node test/e2e.test.ts"
+  },
+  "keywords": [
+    "clockr",
+    "frp",
+    "debugging",
+    "protobuf",
+    "websocket"
+  ],
+  "license": "MIT"
+}

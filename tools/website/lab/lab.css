@@ -1,0 +1,237 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0d10;
+  --panel: #141820;
+  --edge: #272c36;
+  --ink: #d8dce5;
+  --dim: #8b93a4;
+  --accent: #ffb454;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(60rem 30rem at 50% -15%, rgba(255, 180, 84, 0.08), transparent 70%),
+    var(--bg);
+  color: var(--ink);
+  font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.lab-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+  width: min(96rem, calc(100% - 3rem));
+  margin: 0 auto;
+  padding: 3.5rem 0 1.5rem;
+}
+
+.lab-eyebrow {
+  margin: 0 0 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  letter-spacing: -0.03em;
+}
+
+.lab-lede {
+  max-width: 48rem;
+  margin: 0.8rem 0 0;
+  color: var(--dim);
+}
+
+.lab-status {
+  margin: 0;
+  flex: none;
+  max-width: 22rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--dim);
+  text-align: right;
+}
+
+.lab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  gap: 1.1rem;
+  width: min(96rem, calc(100% - 3rem));
+  margin: 0 auto;
+  padding-bottom: 3rem;
+}
+
+.lab-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+}
+
+.lab-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.lab-card h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.lab-tag {
+  display: inline-block;
+  margin-top: 0.2rem;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--dim);
+}
+
+.lab-restart {
+  flex: none;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--edge);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.lab-restart:hover,
+.lab-restart:focus-visible {
+  border-color: var(--dim);
+  color: var(--ink);
+}
+
+.lab-canvas-wrap {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.lab-sound {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--edge);
+  border-radius: 7px;
+  background: rgba(11, 13, 16, 0.72);
+  color: var(--dim);
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.lab-sound:hover,
+.lab-sound:focus-visible {
+  border-color: var(--dim);
+  color: var(--ink);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+}
+
+.lab-blurb {
+  margin: 0;
+  color: var(--dim);
+  font-size: 0.84rem;
+}
+
+.lab-error {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #5a2d2d;
+  border-radius: 7px;
+  color: #e39a94;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+}
+
+.lab-card.failed .lab-canvas-wrap {
+  opacity: 0.35;
+}
+
+.no-wasm .lab-canvas-wrap {
+  opacity: 0.35;
+}
+
+.lab-foot {
+  width: min(96rem, calc(100% - 3rem));
+  margin: 0 auto;
+  padding: 1.2rem 0 2.5rem;
+  border-top: 1px solid var(--edge);
+  color: var(--dim);
+  font-size: 0.82rem;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+
+@media (max-width: 760px) {
+  .lab-head {
+    display: block;
+    padding-top: 2.5rem;
+  }
+
+  .lab-status {
+    margin-top: 0.8rem;
+    text-align: left;
+  }
+}
+
+/* Page-level layers: both canvases sit behind the page content. The field is
+   the bottom layer; the Cursor Clocks dial sits just above it, still behind
+   the cards/text. Neither takes pointer events — the page stays fully usable
+   underneath. */
+.page-canvas {
+    position: fixed;
+    inset: 0;
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    aspect-ratio: auto;
+    pointer-events: none;
+}
+
+.page-field {
+    z-index: 0;
+}
+
+.page-dial {
+    z-index: 1;
+}
+
+.lab-head,
+.lab-grid,
+.lab-foot {
+    position: relative;
+    z-index: 2;
+}

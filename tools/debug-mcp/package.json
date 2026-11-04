@@ -1,0 +1,32 @@
+{
+  "name": "clockr-debug-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dependency-free stdio MCP server for live-debugging a clockr host: exposes the debug WebSocket protocol as MCP tools and resources so a coding agent can watch the trace, inject inputs at tick boundaries, and read the results back",
+  "type": "module",
+  "bin": {
+    "clockr-debug-mcp": "./src/main.ts"
+  },
+  "exports": {
+    ".": "./src/main.ts"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/main.ts",
+    "test": "node test/protocol.test.ts",
+    "test:protocol": "node test/protocol.test.ts",
+    "test:e2e": "node test/e2e.test.ts",
+    "test:all": "node test/protocol.test.ts && node test/e2e.test.ts"
+  },
+  "keywords": [
+    "clockr",
+    "frp",
+    "debugging",
+    "mcp",
+    "model-context-protocol",
+    "agent"
+  ],
+  "license": "MIT"
+}

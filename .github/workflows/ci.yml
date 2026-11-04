@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: Linux ${{ matrix.preset }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [linux_x64_debug, linux_x64_release]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31.11.3
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Build and test
+        run: nix develop .#ci -c ./ci/ci.sh ${{ matrix.preset }} --no-debugger
+
+  linux-debugger:
+    name: Linux debug (debugger + web tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31.11.3
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Build and test
+        run: nix develop .#ci -c ./ci/ci.sh linux_x64_debug
+
+  sanitizers:
+    name: Linux debug (${{ matrix.sanitizer }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, thread, undefined]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31.11.3
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Build and test
+        run: nix develop .#ci -c ./ci/ci.sh linux_x64_debug --sanitize ${{ matrix.sanitizer }} --no-debugger
+
+  macos:
+    name: macOS ${{ matrix.preset }}
+    runs-on: macos-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [macOS_arm64_debug, macOS_arm64_release]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: ./ci/ci.sh ${{ matrix.preset }} --no-debugger
+
+  wasm:
+    name: WebAssembly
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31.11.3
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Build and test (debug)
+        run: nix develop .#ci -c ./ci/ci.sh wasm32_debug --no-debugger
+      - name: Build and test (release)
+        run: nix develop .#ci -c ./ci/ci.sh wasm32_release --no-debugger
+
+  windows:
+    name: Windows ${{ matrix.preset }}
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [windows_x64_debug, windows_x64_release]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        shell: cmd
+        run: ci\ci.cmd ${{ matrix.preset }}

@@ -1,0 +1,27 @@
+{
+  "name": "clockr-debug-dsh-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PREVIEW: DeepSeek Harness (dsh/Cordis) plugin adapter that exposes the clockr debug client as one lifecycle-managed service (ctx.clockrDebug). Thin wrapper only - all protocol coupling lives in clockr-debug-client; dsh is developer-preview and its plugin contract may change. Ships as source; npm publish deferred.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node test/plugin.test.ts",
+    "test:plugin": "node test/plugin.test.ts"
+  },
+  "keywords": [
+    "clockr",
+    "frp",
+    "debugging",
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "plugin"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,111 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: c++20
+ColumnLimit: 80
+IndentWidth: 4
+ContinuationIndentWidth: 4
+AccessModifierOffset: -4
+UseTab: Never
+
+# Braces on their own line: functions, classes, records, enums, namespaces, control statements, catch/else.
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterObjCDeclaration: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: false
+  BeforeCatch: true
+  BeforeElse: true
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+# Braced init lists keep a space before the brace and inside it: edge { 0, 1 }, value {}, m_id { id }.
+Cpp11BracedListStyle: false
+SpaceBeforeCpp11BracedList: true
+
+# Return type on its own line for declarations and definitions:
+#   constexpr
+#   std::size_t
+#   find(std::span<std::size_t> parent, std::size_t x);
+AlwaysBreakAfterReturnType: All
+
+# template<node_c node_t>: no space after the keyword.
+# The template parameter list always starts its own line.
+SpaceAfterTemplateKeyword: false
+AlwaysBreakTemplateDeclarations: Yes
+
+# Constructor initializers: colon and commas trailing, members indented, one per line.
+#   node(node_id id, thread_tag thread) :
+#       m_id { id },
+#       m_thread { thread }
+PackConstructorInitializers: Never
+BreakConstructorInitializers: AfterColon
+ConstructorInitializerIndentWidth: 4
+
+# One parameter/argument per line whenever a signature or call breaks,
+# indented from the opening line (not aligned to the open parenthesis).
+BinPackParameters: false
+BinPackArguments: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AlignAfterOpenBracket: BlockIndent
+
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignTrailingComments: true
+AlignOperands: true
+
+# Includes: project headers, then module groups, then catch2, then the standard library.
+# Sort within each block.
+SortIncludes: CaseSensitive
+IncludeBlocks: Preserve
+
+PointerAlignment: Left
+DerivePointerAlignment: false
+IndentCaseLabels: true
+FixNamespaceComments: true
+CompactNamespaces: false
+NamespaceIndentation: None
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: true
+ReflowComments: true
+BreakStringLiterals: true
+BreakBeforeTernaryOperators: true
+BreakBeforeBinaryOperators: None
+BreakBeforeInheritanceComma: false
+BreakInheritanceList: BeforeColon
+SortUsingDeclarations: true
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterForeachMacros: true
+  AfterRequiresInClause: true
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInContainerLiterals: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortLambdasOnASingleLine: None
+PenaltyExcessCharacter: 1000000
+...

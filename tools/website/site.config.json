@@ -1,0 +1,9 @@
+{
+  "name": "clockr",
+  "headline": "A real-time-safe, thread-aware reactive engine for audio apps.",
+  "description": "Compose typed signal networks across threads. The engine owns the topology, crosses them through explicit non-blocking links, and keeps the tick path allocation-free so the graph stays deterministic under real-time pressure.",
+  "sourceName": "GitHub",
+  "sourceUrl": "https://github.com/EloiMarin/clockr",
+  "sourceBlobBase": "https://github.com/EloiMarin/clockr/blob/main",
+  "mirrorUrl": ""
+}

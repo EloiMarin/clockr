@@ -1,0 +1,17 @@
+{
+  "//": "Editor/type-check only — dsh's loader runs TypeScript itself (tsx), and plain node >= 24 could run this source via type stripping; there is no build step. `erasableSyntaxOnly` keeps the sources strippable.",
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["es2023", "dom"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["src", "test"]
+}

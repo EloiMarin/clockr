@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{name}} — {{headline}}</title>
+<meta name="description" content="{{description}}">
+<meta property="og:title" content="{{name}} — {{headline}}">
+<meta property="og:description" content="{{description}}">
+<meta property="og:type" content="website">
+<link rel="icon" href="./clockr-mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body class="landing">
+
+{{animation}}
+
+<header class="top">
+  <a class="brand" href="./"><img src="./clockr-logo.svg" alt="{{name}}" width="404" height="128"></a>
+  <nav class="nav" aria-label="Page">
+    <a href="./demo/">Demos</a>
+    <a href="./docs/">Documentation</a>
+    <a class="nav-code" href="{{sourceUrl}}" target="_blank" rel="noopener">Code</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="hero-name">{{name}}</p>
+    <p class="eyebrow">C++20 · real-time-safe · thread-aware</p>
+    <h1>{{headline}}</h1>
+    <p class="lede">{{description}}</p>
+    <div class="actions">
+      <a class="button" href="./demo/">Demos</a>
+      <a class="button ghost" href="./docs/">Documentation</a>
+      <a class="button ghost" href="{{sourceUrl}}" target="_blank" rel="noopener">Code</a>
+    </div>
+  </section>
+</main>
+
+</body>
+</html>

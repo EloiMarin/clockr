@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">clockr mark</title>
+  <desc id="desc">An open outer C and a quieter middle clock around an uppercase R. Independently phased heads turn all three shapes into clocks.</desc>
+  <g id="clockr-mark">
+    <!-- Outer C, a quieter middle dial, and an R whose bowl carries the inner head. -->
+    <g stroke-width="5" stroke-linecap="round">
+      <circle cx="64" cy="64" r="49" pathLength="360" stroke="#9b8cff" stroke-dasharray="260 100" transform="rotate(30 64 64)"/>
+      <circle cx="64" cy="64" r="33" pathLength="360" stroke="#9fb8d8" stroke-dasharray="250 110" transform="rotate(140 64 64)"/>
+      <!-- Instrument Sans R, outlined: no font dependency. -->
+      <path d="M86 0L86 720L352 720Q429 720 483 695Q537 670 565.5 625.5Q594 581 594 520Q594 459 565.5 413.5Q537 368 483 342.5Q429 317 352 317L146 317L146 389L349 389Q429 389 470.5 424Q512 459 512 520Q512 580 471 614Q430 648 349 648L168 648L168 0ZM508 0L125 357L237 357L632 0Z" fill="#c8f56a" stroke="none" transform="translate(64 64) scale(0.0694444 -0.0694444) translate(-359 -360)"/>
+    </g>
+
+    <!-- Clock heads: worker, ui, audio. -->
+    <circle cx="15" cy="64" r="6" fill="#9b8cff"/>
+    <circle cx="92.58" cy="80.5" r="5.5" fill="#9fb8d8"/>
+    <circle cx="77" cy="50" r="5.5" fill="#c8f56a"/>
+  </g>
+</svg>

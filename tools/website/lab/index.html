@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FRP animation lab</title>
+<link rel="stylesheet" href="./lab.css">
+</head>
+<body>
+<!-- Page-level arrangement (the planned landing-page shape). The field is
+     the bottom layer, behind all content; the dial floats above it. Neither
+     takes pointer events. -->
+<canvas id="page-field" class="page-canvas page-field" aria-hidden="true"></canvas>
+<canvas id="page-dial" class="page-canvas page-dial" aria-hidden="true"></canvas>
+
+<header class="lab-head">
+  <div>
+    <p class="lab-eyebrow">throwaway lab · not deployed</p>
+    <h1>Animation sketches</h1>
+    <p class="lab-lede">
+      Eleven sketches inside cards, plus the page-wide cursor dial and its
+      ambient field — the arrangement planned for the real landing page.
+      This page is for iteration only; the goal is to steal whichever ideas
+      earn a place there.
+    </p>
+  </div>
+  <p id="lab-status" class="lab-status">loading wasm…</p>
+</header>
+
+<main id="lab-grid" class="lab-grid"></main>
+
+<footer class="lab-foot">
+  <p><code>./build.sh</code> rebuilds the wasm; <code>node serve.mjs</code> serves the
+  sources plus the build. JS/CSS edits need only a refresh.</p>
+</footer>
+
+<script src="./lab_shell.js"></script>
+<script type="module" src="./lab.js"></script>
+</body>
+</html>

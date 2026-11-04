@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{name}} — live demos</title>
+<meta name="description" content="The DAWmulator and its live debugger, in this browser or on the live host.">
+<link rel="icon" href="../clockr-mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body class="demo-page">
+
+<header class="top">
+  <a class="brand" href="../"><img src="../clockr-logo.svg" alt="{{name}}" width="404" height="128"></a>
+  <nav class="nav" aria-label="Page">
+    <a href="../">Home</a>
+    <a href="./" aria-current="page">Demos</a>
+    <a href="../docs/">Docs</a>
+    <label class="view-switch runtime-switch" title="Run the demo in this browser, or against the live host">
+      <span>Runtime</span>
+      <select id="demo-runtime">
+        <option value="local">In-browser</option>
+        <option value="live">Live host</option>
+      </select>
+    </label>
+    <label class="view-switch" title="Show the debugger beside the DAWmulator">
+      <input type="checkbox" id="show-debugger" role="switch">
+      <span>Show debugger</span>
+    </label>
+    <a class="nav-code" href="{{sourceUrl}}" target="_blank" rel="noopener">Code</a>
+  </nav>
+</header>
+
+<main class="demo-main">
+  <h1 class="visually-hidden">Live demos</h1>
+  <section class="demo-grid" id="demo-grid" aria-label="Live demos">
+    {{dawPane}}
+    <div class="demo-splitter" id="demo-splitter" role="separator"
+         aria-orientation="vertical" aria-label="Resize DAWmulator and debugger"
+         aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" tabindex="0"
+         title="Drag to resize; double-click to reset"></div>
+    {{debuggerPane}}
+  </section>
+</main>
+
+<script>
+(() => {
+  const STORAGE_KEY = "clockr.demo.split";
+  const RUNTIME_KEY = "clockr.demo.runtime";
+  const MIN_PANE_PX = 280;
+  const stackedQuery = window.matchMedia("(max-width: 720px)");
+
+  const toggle = document.getElementById("show-debugger");
+  const frame = document.getElementById("debugger-frame");
+  const grid = document.getElementById("demo-grid");
+  const splitter = document.getElementById("demo-splitter");
+  const runtime = document.getElementById("demo-runtime");
+  const panes = [...document.querySelectorAll("iframe[data-local-src], iframe[data-live-src]")];
+  const localAvailable = panes.length > 0
+    && panes.every((pane) => Boolean(pane.dataset.localSrc));
+  const liveAvailable = panes.length > 0
+    && panes.every((pane) => Boolean(pane.dataset.liveSrc));
+
+  if (!toggle)
+    return;
+
+  let ratio = readRatio();
+  let dragging = false;
+  let dragOffset = 0;
+
+  function readRatio()
+  {
+    try
+    {
+      const value = Number.parseFloat(localStorage.getItem(STORAGE_KEY) ?? "");
+      return Number.isFinite(value) ? value : 0.5;
+    }
+    catch
+    {
+      return 0.5;
+    }
+  }
+
+  function storeRatio(value)
+  {
+    try
+    {
+      localStorage.setItem(STORAGE_KEY, String(value));
+    }
+    catch
+    {
+      // Private browsing or a disabled store: the split still works this visit.
+    }
+  }
+
+  function readRuntime()
+  {
+    const query = new URLSearchParams(location.search).get("runtime");
+
+    if (query === "local" || query === "wasm")
+      return "local";
+    if (query === "live")
+      return "live";
+
+    try
+    {
+      const stored = localStorage.getItem(RUNTIME_KEY);
+      if (stored === "local" && localAvailable)
+        return stored;
+      if (stored === "live" && liveAvailable)
+        return stored;
+    }
+    catch
+    {
+      // Private browsing or a disabled store: the default still works.
+    }
+
+    // The in-browser runtime is the resilient default; the live host remains
+    // one switch away when it is part of the build.
+    return localAvailable ? "local" : "live";
+  }
+
+  function applyRuntime(value, updateUrl = true, persist = true)
+  {
+    if (value === "local" && !localAvailable)
+      value = "live";
+    if (value === "live" && !liveAvailable)
+      value = "local";
+
+    if (runtime)
+    {
+      runtime.value = value;
+      runtime.disabled = !(localAvailable && liveAvailable);
+
+      for (const option of runtime.options)
+      {
+        option.disabled = (option.value === "local" && !localAvailable)
+          || (option.value === "live" && !liveAvailable);
+      }
+    }
+
+    for (const pane of panes)
+    {
+      const target = value === "local" ? pane.dataset.localSrc : pane.dataset.liveSrc;
+
+      if (!target)
+        continue;
+
+      if (pane.id === "debugger-frame" && !document.body.classList.contains("show-debugger"))
+      {
+        // A hidden debugger stays unloaded; setShown() uses data-src later.
+        pane.dataset.src = target;
+        if (pane.hasAttribute("src"))
+          pane.setAttribute("src", target);
+      }
+      else if (pane.getAttribute("src") !== target)
+      {
+        pane.setAttribute("src", target);
+      }
+    }
+
+    for (const link of document.querySelectorAll(".demo-open"))
+    {
+      const href = value === "local" ? link.dataset.localHref : link.dataset.liveHref;
+
+      if (href)
+        link.setAttribute("href", href);
+    }
+
+    if (persist)
+    {
+      try
+      {
+        localStorage.setItem(RUNTIME_KEY, value);
+      }
+      catch
+      {
+        // The switch still works for this visit.
+      }
+    }
+
+    if (updateUrl)
+    {
+      const url = new URL(location.href);
+
+      if (value === "local")
+        url.searchParams.delete("runtime");
+      else
+        url.searchParams.set("runtime", value);
+
+      history.replaceState(null, "", url);
+    }
+  }
+
+  function clampRatio(value)
+  {
+    if (!grid || !splitter)
+      return 0.5;
+
+    const rect = grid.getBoundingClientRect();
+    const gap = Number.parseFloat(getComputedStyle(grid).columnGap) || 0;
+    const handle = splitter.getBoundingClientRect().width || 0;
+    const available = rect.width - handle - gap * 2;
+
+    if (available <= 0)
+      return 0.5;
+
+    const min = Math.min(0.45, Math.max(0.2, MIN_PANE_PX / available));
+    return Math.min(1 - min, Math.max(min, value));
+  }
+
+  function renderSplit(persist = false)
+  {
+    if (!grid || !splitter)
+      return;
+
+    const shown = document.body.classList.contains("show-debugger");
+
+    if (!shown || stackedQuery.matches)
+    {
+      grid.style.removeProperty("grid-template-columns");
+      return;
+    }
+
+    ratio = clampRatio(ratio);
+    grid.style.gridTemplateColumns = `${ratio}fr auto ${1 - ratio}fr`;
+    splitter.setAttribute("aria-valuenow", String(Math.round(ratio * 100)));
+    splitter.setAttribute("aria-valuetext", `DAWmulator ${Math.round(ratio * 100)}%`);
+
+    if (persist)
+      storeRatio(ratio);
+  }
+
+  function ratioFromPointer(clientX)
+  {
+    const rect = grid.getBoundingClientRect();
+    const gap = Number.parseFloat(getComputedStyle(grid).columnGap) || 0;
+    const handle = splitter.getBoundingClientRect().width || 0;
+    const available = rect.width - handle - gap * 2;
+
+    if (available <= 0)
+      return ratio;
+
+    return (clientX - rect.left - gap - handle / 2) / available;
+  }
+
+  function setShown(show, updateUrl = true)
+  {
+    document.body.classList.toggle("show-debugger", show);
+    toggle.checked = show;
+
+    if (show && frame && !frame.getAttribute("src"))
+      frame.setAttribute("src", frame.dataset.src);
+
+    renderSplit(false);
+
+    if (updateUrl)
+    {
+      const url = new URL(location.href);
+
+      if (show)
+        url.searchParams.set("debugger", "1");
+      else
+        url.searchParams.delete("debugger");
+
+      history.replaceState(null, "", url);
+    }
+  }
+
+  function endDrag(event)
+  {
+    if (!dragging)
+      return;
+
+    dragging = false;
+    document.body.classList.remove("demo-dragging");
+
+    if (splitter.hasPointerCapture(event.pointerId))
+      splitter.releasePointerCapture(event.pointerId);
+
+    storeRatio(ratio);
+  }
+
+  toggle.addEventListener("change", () => setShown(toggle.checked));
+
+  if (splitter)
+  {
+    splitter.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || stackedQuery.matches ||
+          !document.body.classList.contains("show-debugger"))
+        return;
+
+      event.preventDefault();
+      dragging = true;
+      splitter.setPointerCapture(event.pointerId);
+      document.body.classList.add("demo-dragging");
+
+      const rect = splitter.getBoundingClientRect();
+      dragOffset = event.clientX - (rect.left + rect.width / 2);
+    });
+
+    splitter.addEventListener("pointermove", (event) => {
+      if (!dragging)
+        return;
+
+      ratio = clampRatio(ratioFromPointer(event.clientX - dragOffset));
+      renderSplit(false);
+    });
+
+    splitter.addEventListener("pointerup", endDrag);
+    splitter.addEventListener("pointercancel", endDrag);
+
+    splitter.addEventListener("dblclick", () => {
+      ratio = 0.5;
+      renderSplit(true);
+    });
+
+    splitter.addEventListener("keydown", (event) => {
+      if (stackedQuery.matches ||
+          !document.body.classList.contains("show-debugger"))
+        return;
+
+      const step = event.shiftKey ? 0.1 : 0.02;
+      let next = ratio;
+
+      if (event.key === "ArrowLeft")
+        next -= step;
+      else if (event.key === "ArrowRight")
+        next += step;
+      else if (event.key === "Home")
+        next = 0;
+      else if (event.key === "End")
+        next = 1;
+      else
+        return;
+
+      event.preventDefault();
+      ratio = clampRatio(next);
+      renderSplit(true);
+    });
+  }
+
+  window.addEventListener("resize", () => renderSplit(false));
+
+  if (runtime)
+  {
+    const label = runtime.closest("label");
+
+    if (label)
+      label.hidden = !(localAvailable || liveAvailable);
+
+    runtime.addEventListener("change", () => applyRuntime(runtime.value));
+  }
+
+  applyRuntime(readRuntime(), false, false);
+
+  const params = new URLSearchParams(location.search);
+  setShown(params.get("debugger") === "1", false);
+})();
+</script>
+
+</body>
+</html>

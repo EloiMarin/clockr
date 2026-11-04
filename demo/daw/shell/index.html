@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>clockr — DAWmulator</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header class="site-head">
+  <div>
+    <h1>clockr <span class="thin">DAWmulator</span></h1>
+    <p class="tagline">A transport, a scheduler and a voice living in an FRP network.
+    This page is only the dumb shell: widgets <code>set()</code> ports, the engine
+    <code>tick()</code>s regions, readouts <code>get()</code> outputs.</p>
+  </div>
+  <div class="engine-state">
+    <span id="engine-badge" class="badge">engine: loading</span>
+    <button id="reset-btn" class="ghost-btn" title="Destroy and rebuild the program from its recipe">rebuild engine</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ==================== the DAW ==================== -->
+  <section class="panel" id="daw-panel">
+    <h2>Transport</h2>
+
+    <div id="transport-bar">
+      <button id="play-btn" class="big-btn">Play</button>
+      <button id="rtz-btn" class="mid-btn" title="Return to zero: seek beat 0">RTZ</button>
+
+      <div class="readout">
+        <span class="readout-label">position</span>
+        <span class="readout-value" id="pos-bars">—</span>
+        <span class="readout-sub mono" id="pos-beats">—</span>
+      </div>
+
+      <div class="control">
+        <label for="bpm-input">bpm</label>
+        <input type="range" id="bpm-slider" min="40" max="240" step="1" value="120">
+        <input type="number" id="bpm-input" class="mono" min="40" max="240" step="1" value="120">
+      </div>
+
+      <div class="control">
+        <label for="master-slider">master</label>
+        <input type="range" id="master-slider" min="0" max="1" step="0.01" value="0.8">
+        <span class="mono" id="master-value">0.80</span>
+      </div>
+
+      <button id="loop-btn" class="mid-btn on" title="Loop enable (feeds the loop input)">Loop</button>
+      <div class="control">
+        <label>loop</label>
+        <input type="number" id="loop-start" class="mono" step="0.25" value="0" title="Loop start (beats)">
+        <span class="dim">…</span>
+        <input type="number" id="loop-end" class="mono" step="0.25" value="4" title="Loop end (beats)">
+      </div>
+
+      <div class="meter">
+        <span class="readout-label">voice</span>
+        <div class="meter-track"><div class="meter-fill" id="voice-meter"></div></div>
+        <span class="mono" id="voice-value">0.00</span>
+      </div>
+    </div>
+
+    <div id="timeline-wrap">
+      <div id="timeline">
+        <div id="ruler"></div>
+        <div id="lane">
+          <div id="loop-band" class="off"></div>
+          <div id="loop-handle-l" class="loop-handle" title="Drag: loop start"></div>
+          <div id="loop-handle-r" class="loop-handle" title="Drag: loop end"></div>
+          <div id="note" title="The scripted note — id 60, beat 3.5, one beat long (its off crossing rides through a short loop)"><span>60</span></div>
+          <div id="seek-mark" hidden></div>
+          <div id="ghost-cursor" title="playhead — the audio region's output, one sample per block"></div>
+          <div id="cursor" title="playhead_ui — the ui region's latest sample of the playhead (the FRP path)"></div>
+        </div>
+      </div>
+      <p class="hint">click to seek · drag the loop band or its edges to set the loop ·
+      the thick cursor is the ui region's sample of the playhead (<code>playhead_ui</code>),
+      the thin one the audio region's (<code>playhead</code>) — pause the ui auto-loop and watch
+      the thick one freeze while the thin one keeps moving</p>
+    </div>
+  </section>
+
+  <!-- ==================== the network ==================== -->
+  <section class="panel" id="network-panel">
+    <h2>The network</h2>
+
+    <div class="regions">
+      <div class="region-card">
+        <h3>ui region</h3>
+        <div class="region-row">
+          <button class="mid-btn" id="step-ui-btn">Step</button>
+          <label class="toggle"><input type="checkbox" id="auto-ui" checked> auto
+            <span class="dim mono" id="ui-hz">60 Hz</span></label>
+          <span class="ticks mono" id="ui-ticks">ticks 0</span>
+        </div>
+        <p class="region-note">owns intent — stepped by user action and the message loop</p>
+      </div>
+      <div class="region-card">
+        <h3>audio region</h3>
+        <div class="region-row">
+          <button class="mid-btn" id="step-audio-btn">Step block</button>
+          <label class="toggle"><input type="checkbox" id="auto-audio" checked> auto
+            <span class="dim mono" id="audio-hz">—</span></label>
+          <span class="ticks mono" id="audio-ticks">blocks 0</span>
+        </div>
+        <p class="region-note">owns time — one tick per audio block, wall-clock locked</p>
+      </div>
+    </div>
+
+    <div class="ports">
+      <div class="ports-col">
+        <h3>Inputs <span class="dim">(settable)</span></h3>
+        <table class="ports-table" id="inputs-table"><tbody></tbody></table>
+      </div>
+      <div class="ports-col">
+        <h3>Outputs <span class="dim">(inspected on arrival)</span></h3>
+        <table class="ports-table" id="outputs-table"><tbody></tbody></table>
+      </div>
+    </div>
+
+    <div class="log-head">
+      <h3>Output log</h3>
+      <div class="log-controls">
+        <button class="chip" data-filter="all">all</button>
+        <button class="chip" data-filter="audio">audio</button>
+        <button class="chip" data-filter="ui">ui</button>
+        <button class="chip" id="log-pause">pause</button>
+        <button class="chip" id="log-clear">clear</button>
+      </div>
+    </div>
+    <div id="log" class="log"></div>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <p><span class="mono">clockr</span> — a real-time-safe, thread-aware FRP engine for audio apps.
+  The network lives in <code>daw/network.hpp</code>, the math in <code>daw/transport.hpp</code>;
+  this page only knows port names. The engine itself runs in the host —
+  its two clocks are the auto loops above.</p>
+</footer>
+
+<script src="./app.js"></script>
+</body>
+</html>

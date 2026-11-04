@@ -1,0 +1,65 @@
+.cache
+.direnv
+_build
+_install
+compile_commands.json
+
+demo/daw/shell/daw_shell.js
+demo/daw/shell/daw_shell.wasm
+demo/daw/shell/daw_shell.wasm.map
+
+# Local tooling, editor and OS cruft
+*.log
+npm-debug.log*
+yarn-error.log*
+.env
+.env.*
+!.env.example
+.envrc.local
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.orig
+*.rej
+
+# Generated build output that can appear outside _build
+CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+Testing/
+cmake-build-*/
+build/
+_site/
+dist/
+node_modules/
+*.tsbuildinfo
+
+# Coverage and profiling
+coverage/
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+lcov.info
+
+# Compiled artifacts
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.pdb
+*.ilk
+
+# Nix build results
+result
+result-*

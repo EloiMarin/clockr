@@ -1,0 +1,288 @@
+:root {
+  --bg: #11151c;
+  --panel: #171d26;
+  --panel-2: #1e2633;
+  --line: #2c3646;
+  --text: #d8dee9;
+  --muted: #8290a3;
+  --accent: #7aa2f7;
+  --audio: #9ece6a;
+  --ui: #7aa2f7;
+  --worker: #bb9af7;
+  --signal: #4c5a70;
+  --latest: #7aa2f7;
+  --queued: #bb9af7;
+  --amber: #e0af68;
+  --graph-bg: #0e131b;
+  --chip-bg: #0b1020;
+  --table-bg: #0f1522;
+  --faint: #566278;
+  --evaluating: #b9f6ca;
+  --evaluating-ink: #062d1a;
+  --threw: #ff6b6b;
+  --threw-ink: #3a0808;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+body {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  height: 100vh;
+}
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand { font-weight: 600; color: var(--accent); }
+.spacer { flex: 1; }
+.example { color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.example select { background: var(--panel); color: inherit; border: 1px solid var(--line); border-radius: 3px; }
+.status { color: var(--muted); }
+.status.ok { color: var(--audio); }
+.status.err { color: var(--threw); }
+.dropped { color: var(--threw); }
+
+main {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  min-height: 0;
+}
+
+#graph-panel {
+  overflow: hidden;
+  position: relative;
+  background-color: var(--graph-bg);
+  background-image: radial-gradient(circle, #1b2432 1.2px, transparent 1.3px);
+  background-size: 24px 24px;
+}
+/* The graph fills its panel; panning and zooming are a transform on the
+   viewport group, not native scrolling. */
+#graph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+#graph:active { cursor: grabbing; }
+#graph g[data-node] { cursor: grab; }
+
+#inspector {
+  border-left: 1px solid var(--line);
+  background: var(--panel);
+  overflow: auto;
+  padding: 8px 12px;
+}
+
+#inspector h2 { font-size: 12px; text-transform: uppercase; color: var(--muted); margin: 16px 0 8px; }
+#inspector h2:first-child { margin-top: 0; }
+
+#event-list { margin: 0; padding-left: 28px; }
+#event-list li { padding: 1px 4px; border-radius: 3px; }
+#event-list li.current { background: var(--accent); color: #0b1020; }
+
+/* The selected event's value and node, below the event list. */
+.inspector-value { margin-bottom: 4px; }
+.inspector-value code { font-size: 11px; color: var(--audio); }
+.struct-table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+.struct-table th {
+  text-align: left;
+  padding: 2px 4px;
+  font-size: 11px;
+  color: var(--amber);
+  border-bottom: 1px solid var(--line);
+}
+.struct-table td { padding: 1px 4px; }
+.struct-table .col-type { color: var(--muted); }
+.struct-table .col-name { color: var(--text); }
+.struct-table .col-value { color: var(--audio); text-align: right; }
+.inspector-node { color: var(--muted); font-size: 11px; }
+
+/* Control bar separating the graph/event viewports above from the timeline
+   below: one centered row of navigation buttons, one centered row of
+   position text. */
+#transport-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+
+#timeline-panel {
+  position: relative;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  padding: 8px 12px;
+  min-width: 0;
+}
+
+#timeline { min-width: 0; overflow: hidden; }
+
+/* Zoom lives on its viewport, floating bottom-right. */
+.zoom-float,
+.graph-float {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  display: flex;
+  gap: 6px;
+}
+.graph-float { bottom: 12px; }
+.zoom-float button,
+.graph-float button {
+  background: rgba(30, 38, 51, 0.72);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.zoom-float button:hover,
+.graph-float button:hover { border-color: var(--accent); background: rgba(30, 38, 51, 0.95); }
+
+#timeline-svg { display: block; width: 100%; cursor: grab; touch-action: none; }
+#timeline-svg:active { cursor: grabbing; }
+
+.tl-grid { stroke: var(--line); stroke-width: 1; opacity: 0.55; }
+.tl-axis { fill: var(--muted); font-size: 10px; }
+.tl-lane-label { fill: var(--muted); font-size: 11px; }
+.tl-lane-sep { stroke: var(--line); stroke-width: 1; opacity: 0.7; }
+.tl-tick { stroke-width: 2; }
+.tl-tick.selected { stroke-width: 4.5; }
+.tl-tick-halo { stroke: var(--accent); stroke-width: 11; opacity: 0.5; }
+.tl-center { stroke: var(--accent); stroke-width: 2; }
+.tl-center-label { fill: var(--accent); font-size: 10px; }
+
+.transport-buttons { display: flex; align-items: stretch; gap: 6px; }
+.transport-buttons button {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.transport-buttons button:hover { border-color: var(--accent); }
+/* Own centered line: symmetric growth never drags the buttons sideways. */
+.cursor-label {
+  color: var(--muted);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* SVG graph */
+.node-box { stroke-width: 1.5; }
+.port-box { stroke-width: 1.5; stroke-dasharray: 5 3; }
+.node-label { font-size: 12px; fill: var(--text); }
+.port-label { font-size: 11px; fill: var(--text); }
+.node-port { font-size: 10.5px; fill: var(--muted); }
+.port-dot { stroke: var(--graph-bg); stroke-width: 1; }
+
+/* One region container per clock, tinted by clock. */
+.lane-band { stroke-width: 1.5; }
+.band-audio { fill: rgba(158, 206, 106, 0.045); stroke: rgba(158, 206, 106, 0.38); }
+.band-ui { fill: rgba(122, 162, 247, 0.05); stroke: rgba(122, 162, 247, 0.38); }
+.band-worker { fill: rgba(187, 154, 247, 0.05); stroke: rgba(187, 154, 247, 0.38); }
+.band-label { font-size: 13px; letter-spacing: 2px; }
+.band-label-audio { fill: var(--audio); }
+.band-label-ui { fill: var(--ui); }
+.band-label-worker { fill: var(--worker); }
+
+/* Edges. A same-clock signal is solid; a crossing link is dashed and hue-coded
+   by its policy, named by the legend. A backward (delay-feedback) edge carries
+   an arrowhead — the in-left/out-right convention cannot show a loop's
+   direction. */
+.edge { stroke: var(--signal); stroke-width: 2; fill: none; }
+.edge.link { stroke-dasharray: 7 5; }
+.edge.link.latest { stroke: var(--latest); }
+.edge.link.queued { stroke: var(--queued); }
+.edge.backward { marker-end: url(#edge-arrow); }
+.edge-arrow { fill: var(--signal); }
+
+/* Value boxes sit on the edge that carries them: a one-line chip for a scalar,
+   a field table for a struct. */
+.value-chip-bg { fill: var(--chip-bg); stroke: var(--line); }
+.value-chip-text { font-size: 10px; fill: var(--audio); }
+.value-box-frame { fill: var(--table-bg); stroke: var(--line); stroke-width: 1.5; }
+.value-box-header { font-size: 12px; font-weight: bold; fill: var(--amber); }
+.value-box-sep { stroke: #1f2937; stroke-width: 1; }
+.value-box-type { font-size: 11px; fill: var(--muted); }
+.value-box-name { font-size: 11px; fill: var(--text); }
+.value-box-value { font-size: 11px; fill: var(--audio); }
+.value-box-more { font-size: 10px; fill: var(--faint); }
+
+/* Hover isolation: the hovered node or edge path stays bright, the rest of
+   the graph recedes. */
+.dim { transition: opacity 0.12s ease; }
+#graph.isolating .dim:not(.hot) { opacity: 0.35; }
+#graph g[data-node].hot rect.node-box { stroke: var(--amber); stroke-width: 2.5; }
+#graph .edge.hot { stroke: var(--amber); stroke-width: 3.5; }
+#graph .value-box.hot .value-box-frame { stroke: var(--amber); stroke-width: 2; }
+#graph .value-box.hot .value-chip-bg { stroke: var(--amber); }
+
+/* Legend: a fixed key for the edge hues and the port convention. */
+.legend {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  background: rgba(11, 16, 32, 0.85);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 10px;
+  color: var(--muted);
+  pointer-events: none;
+  user-select: none;
+}
+.legend-row { display: flex; align-items: center; gap: 8px; }
+.legend .swatch { width: 28px; border-top: 2px solid var(--signal); }
+.legend .swatch.link { border-top-style: dashed; }
+.legend .swatch.latest { border-color: var(--latest); }
+.legend .swatch.queued { border-color: var(--queued); }
+.legend .swatch.port {
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--graph-bg);
+  border-radius: 50%;
+  background: var(--audio);
+}
+
+/* The edge tooltip follows the pointer while an edge is hovered. */
+.graph-tooltip {
+  position: absolute;
+  max-width: 320px;
+  padding: 3px 8px;
+  background: var(--chip-bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+.graph-tooltip[hidden] { display: none; }

@@ -1,0 +1,429 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "description": "Base configuration for all platforms",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/_build/${presetName}",
+      "installDir": "${sourceDir}/_install/${presetName}",
+      "cacheVariables": {
+        "CLOCKR_OFFLINE_BUILD": "OFF",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_COLOR_DIAGNOSTICS": "ON",
+        "CLOCKR_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "clang",
+      "description": "Clang toolchain",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "linux",
+      "description": "Target Linux",
+      "hidden": true,
+      "inherits": [ "base", "clang" ],
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "macOS_base",
+      "description": "Target MacOS",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "windows",
+      "description": "Target Windows with MSVC (run from a Developer Command Prompt so cl.exe is on PATH)",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "linux_x64_release",
+      "displayName": "Linux x86_64 Release",
+      "inherits": "linux",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux_x64_debug",
+      "displayName": "Linux x86_64 Debug",
+      "inherits": "linux",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "macOS_arm64_release",
+      "displayName": "MacOS arm64 Release",
+      "inherits": "macOS_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "macOS_arm64_debug",
+      "displayName": "MacOS arm64 Debug",
+      "inherits": "macOS_base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "windows_x64_release",
+      "displayName": "Windows x64 Release",
+      "inherits": "windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows_x64_debug",
+      "displayName": "Windows x64 Debug",
+      "inherits": "windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "wasm32",
+      "description": "Target WebAssembly via Emscripten (single-threaded). Configure with emcmake.",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_CROSSCOMPILING_EMULATOR": "node",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF"
+      }
+    },
+    {
+      "name": "wasm32_debug",
+      "displayName": "WASM32 Debug",
+      "inherits": "wasm32",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "wasm32_release",
+      "displayName": "WASM32 Release",
+      "inherits": "wasm32",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "build_base",
+      "configurePreset": "base",
+      "hidden": true
+    },
+    {
+      "name": "linux_x64_release",
+      "displayName": "Linux x86_64 Release",
+      "inherits": "build_base",
+      "configurePreset": "linux_x64_release"
+    },
+    {
+      "name": "linux_x64_debug",
+      "displayName": "Linux x86_64 Debug",
+      "inherits": "build_base",
+      "configurePreset": "linux_x64_debug"
+    },
+    {
+      "name": "linux_x64_release_clean",
+      "displayName": "Linux x86_64 Release (clean)",
+      "inherits": "build_base",
+      "configurePreset": "linux_x64_release",
+      "cleanFirst": true
+    },
+    {
+      "name": "linux_x64_debug_clean",
+      "displayName": "Linux x86_64 Debug (clean)",
+      "inherits": "build_base",
+      "configurePreset": "linux_x64_debug",
+      "cleanFirst": true
+    },
+    {
+      "name": "macOS_arm64_release",
+      "displayName": "MacOS arm64 Release",
+      "inherits": "build_base",
+      "configurePreset": "macOS_arm64_release"
+    },
+    {
+      "name": "macOS_arm64_debug",
+      "displayName": "MacOS arm64 Debug",
+      "inherits": "build_base",
+      "configurePreset": "macOS_arm64_debug"
+    },
+    {
+      "name": "macOS_arm64_release_clean",
+      "displayName": "MacOS arm64 Release (clean)",
+      "inherits": "build_base",
+      "configurePreset": "macOS_arm64_release",
+      "cleanFirst": true
+    },
+    {
+      "name": "macOS_arm64_debug_clean",
+      "displayName": "MacOS arm64 Debug (clean)",
+      "inherits": "build_base",
+      "configurePreset": "macOS_arm64_debug",
+      "cleanFirst": true
+    },
+    {
+      "name": "windows_x64_release",
+      "displayName": "Windows x64 Release",
+      "inherits": "build_base",
+      "configurePreset": "windows_x64_release"
+    },
+    {
+      "name": "windows_x64_debug",
+      "displayName": "Windows x64 Debug",
+      "inherits": "build_base",
+      "configurePreset": "windows_x64_debug"
+    },
+    {
+      "name": "windows_x64_release_clean",
+      "displayName": "Windows x64 Release (clean)",
+      "inherits": "build_base",
+      "configurePreset": "windows_x64_release",
+      "cleanFirst": true
+    },
+    {
+      "name": "windows_x64_debug_clean",
+      "displayName": "Windows x64 Debug (clean)",
+      "inherits": "build_base",
+      "configurePreset": "windows_x64_debug",
+      "cleanFirst": true
+    },
+    {
+      "name": "wasm32_debug",
+      "displayName": "WASM32 Debug",
+      "inherits": "build_base",
+      "configurePreset": "wasm32_debug"
+    },
+    {
+      "name": "wasm32_release",
+      "displayName": "WASM32 Release",
+      "inherits": "build_base",
+      "configurePreset": "wasm32_release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux_x64_release",
+      "configurePreset": "linux_x64_release",
+      "output": {
+        "outputOnFailure": true,
+        "shortProgress": true
+      }
+    },
+    {
+      "name": "linux_x64_debug",
+      "configurePreset": "linux_x64_debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macOS_arm64_release",
+      "configurePreset": "macOS_arm64_release",
+      "output": {
+        "outputOnFailure": true,
+        "shortProgress": true
+      }
+    },
+    {
+      "name": "macOS_arm64_debug",
+      "configurePreset": "macOS_arm64_debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows_x64_release",
+      "configurePreset": "windows_x64_release",
+      "output": {
+        "outputOnFailure": true,
+        "shortProgress": true
+      }
+    },
+    {
+      "name": "windows_x64_debug",
+      "configurePreset": "windows_x64_debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "wasm32_debug",
+      "configurePreset": "wasm32_debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "wasm32_release",
+      "configurePreset": "wasm32_release",
+      "output": {
+        "outputOnFailure": true,
+        "shortProgress": true
+      }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux_x64_release",
+      "steps": [
+        { "type": "configure", "name": "linux_x64_release" },
+        { "type": "build", "name": "linux_x64_release" },
+        { "type": "test", "name": "linux_x64_release" }
+      ]
+    },
+    {
+      "name": "linux_x64_debug",
+      "steps": [
+        { "type": "configure", "name": "linux_x64_debug" },
+        { "type": "build", "name": "linux_x64_debug" },
+        { "type": "test", "name": "linux_x64_debug" }
+      ]
+    },
+    {
+      "name": "linux_x64_release_clean",
+      "steps": [
+        { "type": "configure", "name": "linux_x64_release" },
+        { "type": "build", "name": "linux_x64_release_clean" },
+        { "type": "test", "name": "linux_x64_release" }
+      ]
+    },
+    {
+      "name": "linux_x64_debug_clean",
+      "steps": [
+        { "type": "configure", "name": "linux_x64_debug" },
+        { "type": "build", "name": "linux_x64_debug_clean" },
+        { "type": "test", "name": "linux_x64_debug" }
+      ]
+    },
+    {
+      "name": "macOS_arm64_release",
+      "steps": [
+        { "type": "configure", "name": "macOS_arm64_release" },
+        { "type": "build", "name": "macOS_arm64_release" },
+        { "type": "test", "name": "macOS_arm64_release" }
+      ]
+    },
+    {
+      "name": "macOS_arm64_debug",
+      "steps": [
+        { "type": "configure", "name": "macOS_arm64_debug" },
+        { "type": "build", "name": "macOS_arm64_debug" },
+        { "type": "test", "name": "macOS_arm64_debug" }
+      ]
+    },
+    {
+      "name": "macOS_arm64_release_clean",
+      "steps": [
+        { "type": "configure", "name": "macOS_arm64_release" },
+        { "type": "build", "name": "macOS_arm64_release_clean" },
+        { "type": "test", "name": "macOS_arm64_release" }
+      ]
+    },
+    {
+      "name": "macOS_arm64_debug_clean",
+      "steps": [
+        { "type": "configure", "name": "macOS_arm64_debug" },
+        { "type": "build", "name": "macOS_arm64_debug_clean" },
+        { "type": "test", "name": "macOS_arm64_debug" }
+      ]
+    },
+    {
+      "name": "windows_x64_release",
+      "steps": [
+        { "type": "configure", "name": "windows_x64_release" },
+        { "type": "build", "name": "windows_x64_release" },
+        { "type": "test", "name": "windows_x64_release" }
+      ]
+    },
+    {
+      "name": "windows_x64_debug",
+      "steps": [
+        { "type": "configure", "name": "windows_x64_debug" },
+        { "type": "build", "name": "windows_x64_debug" },
+        { "type": "test", "name": "windows_x64_debug" }
+      ]
+    },
+    {
+      "name": "windows_x64_release_clean",
+      "steps": [
+        { "type": "configure", "name": "windows_x64_release" },
+        { "type": "build", "name": "windows_x64_release_clean" },
+        { "type": "test", "name": "windows_x64_release" }
+      ]
+    },
+    {
+      "name": "windows_x64_debug_clean",
+      "steps": [
+        { "type": "configure", "name": "windows_x64_debug" },
+        { "type": "build", "name": "windows_x64_debug_clean" },
+        { "type": "test", "name": "windows_x64_debug" }
+      ]
+    },
+    {
+      "name": "wasm32_debug",
+      "steps": [
+        { "type": "configure", "name": "wasm32_debug" },
+        { "type": "build", "name": "wasm32_debug" },
+        { "type": "test", "name": "wasm32_debug" }
+      ]
+    },
+    {
+      "name": "wasm32_release",
+      "steps": [
+        { "type": "configure", "name": "wasm32_release" },
+        { "type": "build", "name": "wasm32_release" },
+        { "type": "test", "name": "wasm32_release" }
+      ]
+    }
+  ]
+}

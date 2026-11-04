@@ -1,0 +1,281 @@
+syntax = "proto3";
+
+// The wire schema between the debug producer (a debug_engine + recorder inside
+// the host process) and any consumer (the web UI; future MCP/skills clients).
+//
+// Versioned by package name: a client pins clockr.debug.v1 and the schema
+// grows additively within it. Values are the kernel variant
+// (monostate/bool/int64/double plus ref-counted user structs); the value set
+// grows by adding `Value` oneof alternatives, never by renumbering.
+//
+// The producer records one binary frame per protobuf message over the
+// WebSocket, so messages are self-delimited by the transport and need no
+// length prefix. Ordering: within one thread tag the sequence numbers are a
+// total order (one debug_engine per producer thread); across threads the
+// interleaving is arrival order, and a tick is named by (thread, epoch).
+
+package clockr.debug.v1;
+
+// kernel::value. An unset oneof means the payload was absent; `unit` is the
+// monostate ("no event") alternative, spelled explicitly so "absent" and
+// "monostate" stay distinguishable. User structs travel as `struct_value`: a
+// type id plus one Value per described field, in schema order (the schema is
+// sent once in GraphDescription.types). A struct whose type is anonymous or
+// unknown to the client has type_id 0 and no fields, and renders as `struct`.
+message Value
+{
+    oneof kind
+    {
+        bool        unit         = 1;
+        bool        bool_value   = 2;
+        sint64      int_value    = 3;
+        double      double_value = 4;
+        StructValue struct_value = 5;
+        string      string_value = 6;  // a `text` field, or an enum's spelling
+    }
+}
+
+// One user struct value. `fields` is positional against the TypeSchema with
+// the same id; integer fields of unsigned kind carry their bit pattern in the
+// signed Value (the schema says how to read it back).
+message StructValue
+{
+    uint32 type_id = 1;
+    repeated Value fields = 2;
+}
+
+// One described field of a user type. `kind` is "bool" | "int" | "uint" |
+// "double" | "struct"; `type_id` names the nested struct when kind is
+// "struct".
+message FieldSchema
+{
+    string name    = 1;
+    string kind    = 2;
+    uint32 type_id = 3;
+}
+
+// A user value type's debug schema, keyed by the id every StructValue carries.
+message TypeSchema
+{
+    uint32 id              = 1;
+    string name            = 2;
+    repeated FieldSchema fields = 3;
+}
+
+// One lowered graph node. `fan_in` preserves positional input order (the
+// order the shell connected the node's inputs); `label` names the combinator
+// that emitted it and, for boundary ports, the port name (see
+// graph/node_label.hpp).
+message Node
+{
+    uint64 id     = 1;
+    string kind   = 2;  // "input" | "output" | "internal" | "delay"
+    string clock = 3;  // "audio" | "ui" | "worker"
+    string label  = 4;  // combinator kind, empty when unlabelled
+    string port   = 5;  // boundary port name, empty for interior nodes
+    repeated uint64 fan_in = 6;
+}
+
+// A cross-region edge, carrying the mode the crossing was annotated with.
+message Crossing
+{
+    uint64 from = 1;
+    uint64 to   = 2;
+    string policy = 3;  // "latest" | "queued"
+}
+
+// A boundary port, pairing a node id with its human-readable name.
+message Port
+{
+    uint64 node_id = 1;
+    string name    = 2;
+}
+
+// The set of examples the server knows, and which one is live. Sent on connect
+// and broadcast whenever the set or the live example changes (an embedded host
+// registers a new example per live instance). The page rebuilds its selector
+// from `names` and follows `active`; `active` is empty when the set is empty.
+message ExampleList
+{
+    repeated string names  = 1;
+    string          active = 2;
+}
+
+// The static structure of a network: sent once on connect, before any events.
+// `name` identifies the example the graph belongs to; the page resets its
+// whole view whenever a graph arrives, so a mid-session graph (after an
+// example switch) starts the new timeline cleanly.
+message GraphDescription
+{
+    repeated Node         nodes          = 1;
+    repeated Crossing crossings = 2;
+    repeated Port         inputs         = 3;
+    repeated Port         outputs        = 4;
+    repeated TypeSchema   types          = 5;
+    string                name           = 6;
+}
+
+// A node evaluation travels as one message: which node ran, what it produced
+// (or that it threw), and how long it took. NODE_EVAL_BEGIN stays in the enum
+// for the engine hook, but producers no longer emit it — the web UI used to
+// fold the pair itself, and the split never earned its keep.
+enum EventKind
+{
+    REGION_EVAL_BEGIN = 0;
+    REGION_EVAL_END   = 1;
+    NODE_EVAL_BEGIN   = 2;  // retained, never emitted
+    NODE_EVAL_END     = 3;
+    NODE_EVAL_THROW   = 4;
+}
+
+// One evaluation step. `thread` + `epoch` name the region tick; `sequence` is
+// the producer engine's monotonic counter (total order within one thread).
+// `value` is set for NODE_EVAL_END; `threw` is meaningful for REGION_EVAL_END;
+// `duration_ns` is a measured evaluation time: the tick_fn call on
+// NODE_EVAL_END and NODE_EVAL_THROW, the whole region tick on
+// REGION_EVAL_END (never the sink overhead).
+message TraceEvent
+{
+    uint64    sequence    = 1;
+    uint64    stamp_ns    = 2;  // steady_clock capture time on the producer thread
+    EventKind kind        = 3;
+    uint64    node_id     = 4;
+    string    clock      = 5;
+    uint64    epoch       = 6;
+    Value     value       = 7;
+    bool      threw       = 8;
+    uint64    duration_ns = 9;
+}
+
+// A coalesced batch of events from one producer thread, drained and sent at a
+// bounded rate (the audio thread never blocks on the network). `dropped`
+// counts events the producer's bounded queue could not accept since the last
+// batch, so a lossy trace is visibly lossy rather than silently gappy.
+message EventBatch
+{
+    string              clock   = 1;
+    uint64              dropped = 2;
+    repeated TraceEvent events  = 3;
+}
+
+// Producer -> consumer. `graph`/`batch`/`examples` are the observation stream;
+// `ack`/`port_value` answer a specific client's write-back commands (routed to
+// that connection only) and `command_stats` broadcasts the cumulative drop
+// count of the command path.
+message ServerMessage
+{
+    oneof body
+    {
+        GraphDescription graph         = 1;
+        EventBatch       batch         = 2;
+        ExampleList      examples      = 3;
+        Ack              ack           = 4;
+        PortValue        port_value    = 5;
+        CommandStats     command_stats = 6;
+    }
+}
+
+// Consumer -> producer. `pause`/`resume` gate capture so an idle debugger
+// costs the host nothing; `select_example` switches the ticked network by
+// name (unknown names are ignored); `set_capacity` is reserved for later.
+//
+// The write-back commands (`set_input`, `read_input`, `read_output`) are the
+// debug-agent path: the server cannot touch a ticking
+// program, so it enqueues them into a bounded lock-free queue and the host's
+// tick loop applies them at the next tick boundary. Every command with a
+// `request_id` is answered by exactly one `Ack` (set_input) or `PortValue`
+// (reads) — routed to the connection that asked, never broadcast; a command
+// dropped from a full queue is never answered (see CommandStats).
+message ClientMessage
+{
+    oneof body
+    {
+        Pause         pause          = 1;
+        Resume        resume         = 2;
+        SelectExample select_example = 3;
+        SetInput      set_input      = 4;
+        ReadInput     read_input     = 5;
+        ReadOutput    read_output    = 6;
+    }
+}
+
+message Pause {}
+message Resume {}
+
+// Switch the live example. The server answers by broadcasting the new
+// example's GraphDescription, which resets every client's view.
+message SelectExample
+{
+    string name = 1;
+}
+
+// --- write-back commands (active-example-only addressing) --------
+//
+// The optional `example` field is parsed and reserved for per-example
+// addressing; the debug server answers any explicit name that is not the active
+// example with an error Ack (documented deferral). Empty/absent means "the
+// active example", which is what every current client sends.
+//
+// `request_id` is a client-chosen correlation id, echoed verbatim on the
+// reply. Values travel as the same `Value` variant the trace uses; the debug server
+// accepts the scalars (unit/bool/int/double) and rejects user structs and text
+// with an error Ack (the kernel offers no runtime constructor from a schema).
+
+// Set an input port on the next tick boundary of its region. One Ack answers
+// it, carrying the epoch of the tick that consumed the value.
+message SetInput
+{
+    uint64          request_id = 1;
+    string          port       = 2;
+    Value           value      = 3;
+    optional string example    = 4;
+}
+
+// Read the current value of an input port, at a tick boundary (the read is a
+// host tick-loop act for the same ownership reason the write is).
+message ReadInput
+{
+    uint64          request_id = 1;
+    string          port       = 2;
+    optional string example    = 3;
+}
+
+// Read the value an output port produced on its region's last completed tick.
+message ReadOutput
+{
+    uint64          request_id = 1;
+    string          port       = 2;
+    optional string example    = 3;
+}
+
+// The answer to a SetInput: `error` is non-empty when the command never
+// reached a boundary (unknown port, wrong kind, unsupported value) and
+// `applied_epoch` is 0 then; otherwise `applied_epoch` names the region tick
+// that applied the value (the epoch the trace's REGION_EVAL_END carries, also
+// for a tick that threw before publishing).
+message Ack
+{
+    uint64 request_id    = 1;
+    string error         = 2;
+    uint64 applied_epoch = 3;
+}
+
+// The answer to a ReadInput / ReadOutput: the port's snapshot at the tick
+// boundary, in the same Value form the trace uses. `error` is non-empty (and
+// the value absent) when the read could not be taken.
+message PortValue
+{
+    uint64 request_id = 1;
+    string port       = 2;
+    Value  value      = 3;
+    string error      = 4;
+}
+
+// Cumulative count of write-back commands lost since the server started (a
+// full per-region queue at enqueue time). Broadcast whenever it moves, so a
+// lossy command path is visibly lossy rather than silently gappy (AS-A4). A
+// dropped command is never acked: the client must notice the missing reply.
+message CommandStats
+{
+    uint64 dropped = 1;
+}

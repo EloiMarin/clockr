@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>clockr debugger</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header id="toolbar">
+    <span class="brand">clockr&nbsp;debugger</span>
+    <span id="status" class="status">connecting…</span>
+    <span class="spacer"></span>
+    <label class="example">
+      example
+      <select id="example">
+        <option value="demo">demo</option>
+        <option value="daw">daw</option>
+      </select>
+    </label>
+    <label class="toggle">
+      <input type="checkbox" id="live" checked>
+      live
+    </label>
+    <span id="dropped" class="dropped" title="events dropped by the producer (backpressure)"></span>
+  </header>
+
+  <main>
+    <section id="graph-panel">
+      <svg id="graph" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="legend" class="legend" aria-hidden="true">
+        <div class="legend-row"><span class="swatch signal"></span><span>signal · same clock</span></div>
+        <div class="legend-row"><span class="swatch link latest"></span><span>link · latest</span></div>
+        <div class="legend-row"><span class="swatch link queued"></span><span>link · queued</span></div>
+        <div class="legend-row"><span class="swatch port"></span><span>in left · out right</span></div>
+      </div>
+      <div id="graph-tooltip" class="graph-tooltip" hidden></div>
+      <div class="graph-float">
+        <button id="graph-zoom-out" title="zoom out" aria-label="zoom graph out">−</button>
+        <button id="graph-zoom-in" title="zoom in" aria-label="zoom graph in">+</button>
+        <button id="graph-fit" title="fit to view" aria-label="fit graph to view">⤢</button>
+      </div>
+    </section>
+    <aside id="inspector">
+      <h2>Events</h2>
+      <ol id="event-list"></ol>
+      <h2>Value</h2>
+      <div id="inspector-value" class="inspector-value"></div>
+      <h2>Node</h2>
+      <div id="inspector-node" class="inspector-node"></div>
+    </aside>
+  </main>
+
+  <div id="transport-bar">
+    <div class="transport-buttons">
+      <button id="prev-region-tick" title="previous tick of this region">|◀ region tick</button>
+      <button id="prev-tick" title="previous tick (shift+left)">◀ tick</button>
+      <button id="prev-event" title="previous event (left)">◀ event</button>
+      <button id="next-event" title="next event (right)">event ▶</button>
+      <button id="next-tick" title="next tick (shift+right)">tick ▶</button>
+      <button id="next-region-tick" title="next tick of this region">region tick ▶|</button>
+    </div>
+    <span id="cursor-label" class="cursor-label"></span>
+  </div>
+
+  <footer id="timeline-panel">
+    <div id="timeline"></div>
+    <div class="zoom-float">
+      <button id="zoom-out" title="zoom out (-)">−</button>
+      <button id="zoom-in" title="zoom in (+)">+</button>
+    </div>
+  </footer>
+
+  <script src="./vendor/elk.bundled.js"></script>
+  <script src="./config.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
