@@ -191,7 +191,14 @@ TEST_CASE("shell/program | Owning and borrowing constructions of a delay agree",
         >> shell::output<std::int64_t, kernel::clock_tag::ui>("out")
     };
 
+    // MSVC cannot constant-evaluate the vector-based walk (see
+    // descriptor_storage.test.cpp); compile at runtime there. The parity check
+    // below is the point of the test, not the constant evaluation itself.
+#if defined(_MSC_VER)
+    static const auto compiled { shell::compile(network) };
+#else
     static constexpr auto compiled { shell::compile(network) };
+#endif
 
     kernel::program owned { network };
     kernel::program borrowed { compiled.descriptor() };

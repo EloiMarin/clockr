@@ -136,6 +136,15 @@ constexpr auto compiled_net
     >> shell::output<std::int64_t, kernel::clock_tag::audio>("out")
 };
 
+// MSVC's constexpr evaluator cannot fold the vector-based walk that
+// `shell::compile` performs: a std::vector returned through the std::visit node
+// dispatcher reads back as uninitialized (C2131). The walker itself is fine, so
+// on MSVC `compile` is an ordinary runtime call and the same properties are
+// asserted at runtime in the MSVC-only test case below. Other compilers keep the
+// full compile-time guarantee.
+#if defined(_MSC_VER)
+const auto compiled { shell::compile(compiled_net) };
+#else
 constexpr auto compiled { shell::compile(compiled_net) };
 
 static_assert(compiled.node_count == 3);
@@ -149,6 +158,7 @@ static_assert(compiled.descriptor().output_ids.size() == 1);
 static_assert(std::string_view { compiled.descriptor().input_names[0] } == "in");
 static_assert(std::string_view { compiled.descriptor().output_names[0] } == "out");
 static_assert(compiled.descriptor().evaluation_order.size() == 3);
+#endif
 
 // --- `share` is constexpr too: the whole operator set is compile-able ----
 //
@@ -171,10 +181,14 @@ constexpr auto shared_net
     >> shell::output<std::int64_t, kernel::clock_tag::audio>("out")
 };
 
+#if defined(_MSC_VER)
+const auto shared_compiled { shell::compile(shared_net) };
+#else
 constexpr auto shared_compiled { shell::compile(shared_net) };
 
 static_assert(shared_compiled.input_count == 1);   // the share deduped the source
 static_assert(shared_compiled.output_count == 1);
+#endif
 
 } // namespace
 
@@ -192,3 +206,27 @@ TEST_CASE("shell/compile | A descriptor_storage is deeply constant-initializable
     REQUIRE(fan_in.size() == 1);
     REQUIRE(fan_in[0] == 0);
 }
+
+#if defined(_MSC_VER)
+TEST_CASE("shell/compile | The canonical paths fold at runtime under MSVC", "[constexpr]")
+{
+    // Runtime mirror of the static_asserts that the other compilers evaluate at
+    // compile time (MSVC cannot constant-evaluate the vector-based walk).
+    using namespace clockr;
+
+    REQUIRE(compiled.node_count == 3);
+    REQUIRE(compiled.edge_count == 2);
+    REQUIRE(compiled.input_count == 1);
+    REQUIRE(compiled.output_count == 1);
+    REQUIRE(compiled.descriptor().nodes.size() == 3);
+    REQUIRE(compiled.descriptor().edges.size() == 2);
+    REQUIRE(compiled.descriptor().input_ids.size() == 1);
+    REQUIRE(compiled.descriptor().output_ids.size() == 1);
+    REQUIRE(std::string_view { compiled.descriptor().input_names[0] } == "in");
+    REQUIRE(std::string_view { compiled.descriptor().output_names[0] } == "out");
+    REQUIRE(compiled.descriptor().evaluation_order.size() == 3);
+
+    REQUIRE(shared_compiled.input_count == 1);   // the share deduped the source
+    REQUIRE(shared_compiled.output_count == 1);
+}
+#endif
