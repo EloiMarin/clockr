@@ -267,6 +267,7 @@ TEST_CASE("kernel/value | make_user_value dispatches by size and triviality", "[
     const auto owned { make_user_value<owning>(nullptr, nullptr) };
     REQUIRE(std::holds_alternative<user_ref>(owned));
 
+    release(large);
     release(owned);
 }
 

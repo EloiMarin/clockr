@@ -40,6 +40,13 @@ function(enable_warnings target)
         # - float-equal: fires inside Catch2's expression decomposer, which
         #   compares operands with ==; tests also legitimately compare exact
         #   round-tripped doubles.
+        # - thread-safety-negative: -Weverything enables the negative-capability
+        #   half of clang's thread-safety analysis. Recent libc++ annotates
+        #   std::mutex/std::lock_guard, so every ordinary `lock_guard` would
+        #   warn that acquiring the mutex "requires negative capability". The
+        #   project does not use negative-capability annotations, so keep the
+        #   positive analysis (real double-unlock/deadlock checks) and drop
+        #   this noisy group.
         set(warnings
             -Wall
             -Wextra
@@ -58,6 +65,7 @@ function(enable_warnings target)
             -Wno-unsafe-buffer-usage-in-libc-call
             -Wno-covered-switch-default
             -Wno-float-equal
+            -Wno-thread-safety-negative
             -Wno-poison-system-directories
         )
 

@@ -99,6 +99,25 @@ namespace
     bool g_counting { false };
 } // namespace
 
+// The allocation tests below count through a replacement global `operator new`.
+// ThreadSanitizer's runtime ships its own replacement in libclang_rt.tsan_cxx,
+// so defining ours collides at link time ("multiple definition of operator
+// new"). Under TSan the hook is therefore unavailable, and the tests that need
+// it are skipped; they still run (and pin the no-heap-allocate requirement) in
+// every other configuration.
+#if defined(__SANITIZE_THREAD__)
+#  define CLOCKR_TEST_ALLOC_HOOK 0
+#elif defined(__has_feature)
+#  if __has_feature(thread_sanitizer)
+#    define CLOCKR_TEST_ALLOC_HOOK 0
+#  endif
+#endif
+
+#ifndef CLOCKR_TEST_ALLOC_HOOK
+#  define CLOCKR_TEST_ALLOC_HOOK 1
+#endif
+
+#if CLOCKR_TEST_ALLOC_HOOK
 void*
 operator new(std::size_t n)
 {
@@ -190,6 +209,7 @@ operator delete[](void* p, std::size_t, std::align_val_t) noexcept
 {
     std::free(p);
 }
+#endif // CLOCKR_TEST_ALLOC_HOOK
 
 TEST_CASE("kernel | Release engine evaluates inputs through the graph", "[kernel]")
 {
@@ -555,6 +575,10 @@ TEST_CASE("kernel | Engines agree on stateful graphs", "[A1][kernel]")
 
 TEST_CASE("kernel | Evaluate performs no heap allocations", "[kernel]")
 {
+#if !CLOCKR_TEST_ALLOC_HOOK
+    SKIP("allocation counting is unavailable under ThreadSanitizer");
+#endif
+
     const auto network { build_sum_network() };
 
     kernel::program program { network };
@@ -577,6 +601,10 @@ TEST_CASE("kernel | Evaluate performs no heap allocations", "[kernel]")
 
 TEST_CASE("kernel | Evaluate performs no heap allocations across regions", "[kernel]")
 {
+#if !CLOCKR_TEST_ALLOC_HOOK
+    SKIP("allocation counting is unavailable under ThreadSanitizer");
+#endif
+
     // Both crossing policies in one program: latest (state) and queued
     // (events). Scratch buffers and transferred cells come from the region
     // pool, so a full ui+audio round must not touch the system heap.
@@ -618,6 +646,10 @@ TEST_CASE("kernel | Evaluate performs no heap allocations across regions", "[ker
 
 TEST_CASE("kernel | Evaluate performs no heap allocations for pooled user values", "[kernel]")
 {
+#if !CLOCKR_TEST_ALLOC_HOOK
+    SKIP("allocation counting is unavailable under ThreadSanitizer");
+#endif
+
     // A 24-byte struct is not inlineable, so every value of this type is a
     // ref-counted pool cell: the tick exercises the cell path (make, retain,
     // release) and must still stay off the system heap.
@@ -645,6 +677,10 @@ TEST_CASE("kernel | Evaluate performs no heap allocations for pooled user values
 
 TEST_CASE("kernel | A throwing tick adds no heap allocation", "[kernel]")
 {
+#if !CLOCKR_TEST_ALLOC_HOOK
+    SKIP("allocation counting is unavailable under ThreadSanitizer");
+#endif
+
     // The release engine rethrows the node's exception after closing the
     // region bracket. `throw 42` carries no payload of its own, so anything
     // counted here would be the engine allocating on the throwing path.
@@ -1027,6 +1063,10 @@ TEST_CASE(
     "[kernel]"
 )
 {
+#if !CLOCKR_TEST_ALLOC_HOOK
+    SKIP("allocation counting is unavailable under ThreadSanitizer");
+#endif
+
     const auto network { build_sum_network() };
 
     counting_hook hook;

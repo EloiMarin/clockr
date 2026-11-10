@@ -192,6 +192,18 @@ from_value(const kernel::value& v)
 
         return from_value<payload_t>(v);
     }
+    else if constexpr (std::same_as<T, std::monostate>)
+    {
+        // Deliberately not `std::get<T>`: MSVC's constexpr evaluator rejects
+        // `std::get<std::monostate>` on a variant whose head alternative is
+        // empty ("read of an uninitialized symbol"), which breaks the
+        // round-trip static_assert below. `holds_alternative` reads only the
+        // index and is constexpr-safe everywhere.
+        if (!std::holds_alternative<std::monostate>(v))
+            throw std::bad_variant_access {};
+
+        return std::monostate {};
+    }
     else
     {
         return std::get<T>(v);
