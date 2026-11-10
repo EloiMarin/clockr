@@ -102,6 +102,13 @@ function(enable_warnings target)
             /w14928              # illegal copy-initialization (-Wshadow)
             /permissive-         # standards conformance mode (-Wpedantic)
             /sdl                 # enable additional security checks
+            # First-party code uses quoted includes; angle includes are reserved
+            # for third-party and system headers (see AGENTS.md). Treat all of
+            # them as external so their warnings are not promoted to errors —
+            # this includes STL diagnostics that fire while instantiating a
+            # third-party template (e.g. C4242 from <utility> via uWebSockets).
+            /external:anglebrackets
+            /external:W0
         )
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         set(warnings

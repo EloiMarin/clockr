@@ -59,6 +59,17 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
+if(MSVC)
+    # MSVC's debug STL allocates a container proxy even in a default-constructed
+    # empty container (`_Container_base12` under _ITERATOR_DEBUG_LEVEL != 0).
+    # That heap allocation may not escape a constant expression, so it makes
+    # every `constexpr` container in the codebase (kernel region tables,
+    # shell::flat_map, ...) ill-formed in Debug builds. The project relies on
+    # C++20 constexpr containers, so iterator debugging is off for MSVC Debug;
+    # assertions still run (_DEBUG stays defined, NDEBUG does not).
+    add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>)
+endif()
+
 if(NOT MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
