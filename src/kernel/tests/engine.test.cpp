@@ -51,8 +51,14 @@ namespace Catch
                 {
                     return "double<" + std::to_string(value) + ">";
                 }
-
-                return "(unknown)";
+                else
+                {
+                    // User-typed alternatives. Written as an `else` (not a
+                    // trailing return) so MSVC does not report C4702
+                    // "unreachable code" for the scalar instantiations where
+                    // an earlier branch always returns.
+                    return "(unknown)";
+                }
             }, p);
         }
     };

@@ -37,8 +37,8 @@ struct Catch::StringMaker<clockr::kernel::value>
                     return std::to_string(x);
                 else if constexpr (std::is_same_v<T, double>)
                     return std::to_string(x);
-
-                return "(unknown)";
+                else
+                    return "(unknown)";
             },
             value
         );

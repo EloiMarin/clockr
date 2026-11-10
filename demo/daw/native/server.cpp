@@ -904,6 +904,13 @@ struct server_impl
 
         us_listen_socket_t* listen_socket { nullptr };
 
+        // uWebSockets instantiates std::pair<int, unsigned short> inside
+        // <utility>; MSVC reports C4242 there even though both the template and
+        // the STL are external. Suppress it at the instantiation point only.
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4242)
+#endif
         auto app_object {
             uWS::App()
                 .get(
@@ -960,6 +967,9 @@ struct server_impl
                     }
                 )
         };
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
         if (listen_socket == nullptr)
         {
