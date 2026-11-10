@@ -12,11 +12,16 @@
 
 #include <array>
 #include <cstdint>
+#include <cstdlib>
 #include <span>
 #include <stdexcept>
 #include <string>
 #include <variant>
 #include <vector>
+
+#if defined(_MSC_VER)
+#include <malloc.h>
+#endif
 
 namespace Catch
 {
@@ -118,6 +123,33 @@ namespace
 #endif
 
 #if CLOCKR_TEST_ALLOC_HOOK
+namespace
+{
+// MSVC has no std::aligned_alloc; its aligned allocation family is
+// _aligned_malloc/_aligned_free and the two must be paired (a block from one
+// cannot be released by the other). The standard aligned new/delete overloads
+// below are the only users, so pairing them here is enough.
+void*
+aligned_alloc_bytes(std::size_t bytes, std::size_t alignment) noexcept
+{
+#if defined(_MSC_VER)
+    return _aligned_malloc(bytes, alignment);
+#else
+    return std::aligned_alloc(alignment, bytes);
+#endif
+}
+
+void
+aligned_free_bytes(void* p) noexcept
+{
+#if defined(_MSC_VER)
+    _aligned_free(p);
+#else
+    std::free(p);
+#endif
+}
+} // namespace
+
 void*
 operator new(std::size_t n)
 {
@@ -147,7 +179,7 @@ operator new(std::size_t n, std::align_val_t align)
     const auto a { static_cast<std::size_t>(align) };
     const auto rounded { ((n + a - 1) / a) * a };
 
-    return std::aligned_alloc(a, rounded);
+    return aligned_alloc_bytes(rounded, a);
 }
 
 void*
@@ -159,7 +191,7 @@ operator new[](std::size_t n, std::align_val_t align)
     const auto a { static_cast<std::size_t>(align) };
     const auto rounded { ((n + a - 1) / a) * a };
 
-    return std::aligned_alloc(a, rounded);
+    return aligned_alloc_bytes(rounded, a);
 }
 
 void
@@ -189,25 +221,25 @@ operator delete[](void* p, std::size_t) noexcept
 void
 operator delete(void* p, std::align_val_t) noexcept
 {
-    std::free(p);
+    aligned_free_bytes(p);
 }
 
 void
 operator delete[](void* p, std::align_val_t) noexcept
 {
-    std::free(p);
+    aligned_free_bytes(p);
 }
 
 void
 operator delete(void* p, std::size_t, std::align_val_t) noexcept
 {
-    std::free(p);
+    aligned_free_bytes(p);
 }
 
 void
 operator delete[](void* p, std::size_t, std::align_val_t) noexcept
 {
-    std::free(p);
+    aligned_free_bytes(p);
 }
 #endif // CLOCKR_TEST_ALLOC_HOOK
 

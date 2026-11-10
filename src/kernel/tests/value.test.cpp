@@ -418,8 +418,23 @@ TEST_CASE("kernel/value | Optional members read engaged-or-absent", "[kernel]")
     check_optional(9, field_kind::floating, 4, offsetof(maybe, opt_f32));
     check_optional(10, field_kind::floating, 8, offsetof(maybe, opt_f64));
 
-    // Engaged reads the payload with the scalar widening rules.
-    const maybe engaged { true, -8, -800, -80000, -8000000000LL, 8, 800, 80000u, 8000000000ULL, 0.5f, 2.5 };
+    // Engaged reads the payload with the scalar widening rules. The narrow
+    // members are written with explicit casts: MSVC's optional<T> constructor
+    // instantiates as optional<T>{int} for a plain literal and /W4 reports the
+    // conversion as C4242 even though the value fits.
+    const maybe engaged {
+        true,
+        static_cast<std::int8_t>(-8),
+        static_cast<std::int16_t>(-800),
+        static_cast<std::int32_t>(-80000),
+        std::int64_t { -8000000000LL },
+        static_cast<std::uint8_t>(8),
+        static_cast<std::uint16_t>(800),
+        std::uint32_t { 80000u },
+        std::uint64_t { 8000000000ULL },
+        0.5f,
+        2.5
+    };
 
     const value engaged_want[]
     {
