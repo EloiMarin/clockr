@@ -30,15 +30,31 @@ option(CLOCKR_BUILD_DEMO
     ${PROJECT_IS_TOP_LEVEL}
 )
 
+option(CLOCKR_BUILD_JAM
+    "Build the branchable jam demo"
+    ${CLOCKR_BUILD_DEMO}
+)
+
 option(CLOCKR_BUILD_DEMO_NATIVE
     "Build the native DAWmulator host (fetches miniaudio + uWebSockets; native only)"
     ${PROJECT_IS_TOP_LEVEL}
+)
+
+option(CLOCKR_BUILD_JAM_NATIVE
+    "Build the native jam conductor host (headless; native only)"
+    OFF
 )
 
 set(CLOCKR_DAW_NATIVE_ENABLED OFF)
 
 if(CLOCKR_BUILD_DEMO AND CLOCKR_BUILD_DEMO_NATIVE AND NOT EMSCRIPTEN)
     set(CLOCKR_DAW_NATIVE_ENABLED ON)
+endif()
+
+set(CLOCKR_JAM_NATIVE_ENABLED OFF)
+
+if(CLOCKR_BUILD_JAM AND CLOCKR_BUILD_JAM_NATIVE AND NOT EMSCRIPTEN)
+    set(CLOCKR_JAM_NATIVE_ENABLED ON)
 endif()
 
 # BUILD_TESTING=OFF is the standard global "no tests" signal: honour it as a veto over CLOCKR_BUILD_TESTS.
@@ -140,8 +156,18 @@ endif()
 
 add_subdirectory(src)
 
-if(CLOCKR_BUILD_DEMO)
+# The jam reuses daw_demo's pure transport header target, so the DAW
+# directory is present whenever either demo is enabled.
+if(CLOCKR_BUILD_DEMO OR CLOCKR_BUILD_JAM)
     add_subdirectory(demo/daw)
+endif()
+
+if(CLOCKR_BUILD_JAM)
+    add_subdirectory(demo/jam)
+endif()
+
+if(CLOCKR_JAM_NATIVE_ENABLED)
+    add_subdirectory(demo/jam/native)
 endif()
 
 if(CLOCKR_BUILD_EXAMPLES)

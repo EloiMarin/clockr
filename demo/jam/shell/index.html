@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>clockr — branchable jam</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header class="site-head">
+  <div>
+    <h1>clockr <span class="thin">jam</span></h1>
+    <p class="tagline">A fixed FRP network, a bounded score, and a replayable
+    boundary journal. Edit steps, fork a patch, replay it, and audition raw
+    against candidate.</p>
+  </div>
+  <div class="engine-state">
+    <span id="engine-badge" class="badge">shell: loading</span>
+    <button id="reset-btn" class="ghost-btn" title="Rebuild the program and journal from the demo score">reset</button>
+  </div>
+</header>
+
+<main>
+  <section class="panel transport-panel">
+    <h2>Transport</h2>
+    <div class="transport-bar">
+      <button id="play-btn" class="big-btn">Play</button>
+      <div class="control">
+        <label for="bpm-input">bpm</label>
+        <input id="bpm-input" type="number" class="mono" min="20" max="240" step="1" value="120">
+      </div>
+      <div class="control">
+        <label for="master-slider">master</label>
+        <input id="master-slider" type="range" min="0" max="1" step="0.01" value="0.8">
+        <span id="master-value" class="mono">0.80</span>
+      </div>
+      <div class="control">
+        <label>loop</label>
+        <input id="loop-start" type="number" class="mono" step="0.25" value="0">
+        <span class="dim">…</span>
+        <input id="loop-end" type="number" class="mono" step="0.25" value="8">
+        <label class="toggle"><input id="loop-on" type="checkbox" checked> on</label>
+      </div>
+      <button id="take-btn" class="mid-btn" title="Clear the journal and start recording from the current score">Record</button>
+    </div>
+  </section>
+
+  <div class="timelines">
+    <section class="panel timeline-panel">
+      <h2>Musical time</h2>
+      <div class="readouts">
+        <div><span class="readout-label">bar.beat</span><span id="pos-value" class="readout-value">—</span></div>
+        <div><span class="readout-label">playhead</span><span id="playhead-value" class="mono">—</span></div>
+        <div><span class="readout-label">voices</span><span id="voice-value" class="mono">0</span></div>
+      </div>
+      <div class="lane">
+        <div id="loop-band" class="loop-band"></div>
+        <div id="cursor-raw" class="cursor raw"></div>
+        <div id="cursor-ui" class="cursor ui"></div>
+      </div>
+      <p class="hint">The thick cursor is the ui region's latest sample of the
+      audio playhead (<code>playhead_ui</code>); the thin one is the audio
+      region's own <code>playhead</code>.</p>
+    </section>
+
+    <section class="panel timeline-panel">
+      <h2>Edit history</h2>
+      <div class="readouts">
+        <div><span class="readout-label">revision</span><span id="revision-value" class="readout-value">0</span></div>
+        <div><span class="readout-label">journal entries</span><span id="entries-value" class="mono">0</span></div>
+        <div><span class="readout-label">fork</span><span id="branch-value" class="mono">—</span></div>
+      </div>
+      <p class="hint">Branches cut at a boundary journal entry, not at a bar.
+      The patch in the fork panel is inserted at the chosen cut; the original
+      journal is never mutated.</p>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>Score</h2>
+    <div id="grid" class="grid"></div>
+    <div id="selection" class="selection">
+      <span id="selection-label" class="dim">select a step</span>
+      <label>note <input id="note-input" type="number" class="mono" min="0" max="127" value="60"></label>
+      <label>velocity <input id="velocity-input" type="number" class="mono" min="0" max="127" value="96"></label>
+      <label class="toggle"><input id="gate-input" type="checkbox" checked> gate</label>
+      <button id="apply-step" class="mid-btn">apply step</button>
+      <button id="clear-step" class="mid-btn">clear step</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Record, export, fork</h2>
+    <div class="actions">
+      <button id="export-btn" class="mid-btn">Export scenario</button>
+      <button id="import-btn" class="mid-btn">Import scenario</button>
+      <button id="fork-btn" class="mid-btn">Fork / replay patch</button>
+      <button id="compare-btn" class="mid-btn">Compare original</button>
+      <button id="audition-raw" class="mid-btn">Audition raw</button>
+      <button id="audition-candidate" class="mid-btn">Audition candidate</button>
+      <button id="stop-audio" class="ghost-btn">Stop audio</button>
+    </div>
+    <div class="io-grid">
+      <label class="io-box">
+        <span>Scenario JSON</span>
+        <textarea id="scenario-text" spellcheck="false" placeholder="Export writes the clockr.replay.v1 journal here; Import reads it."></textarea>
+      </label>
+      <label class="io-box">
+        <span>Branch patch JSON</span>
+        <textarea id="patch-text" spellcheck="false">{"patch":{"ops":[{"op":"transpose","a":0,"d":12}]},"cut":null}</textarea>
+      </label>
+    </div>
+    <pre id="result" class="result">No branch yet.</pre>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <p><span class="mono">clockr</span> — the network is fixed
+  (<code>jam::net::app</code>), edits are <code>score_patch</code> data, and
+  replay runs the ordinary engine into a fresh program.</p>
+</footer>
+
+<script src="./app.js"></script>
+</body>
+</html>
