@@ -20,9 +20,10 @@ set_target_properties(clockr_mem PROPERTIES EXPORT_NAME mem)
 set_target_properties(clockr_conc PROPERTIES EXPORT_NAME conc)
 set_target_properties(clockr_kernel PROPERTIES EXPORT_NAME kernel)
 set_target_properties(clockr_shell PROPERTIES EXPORT_NAME shell)
+set_target_properties(clockr_replay PROPERTIES EXPORT_NAME replay)
 
 install(
-    TARGETS clockr clockr_mem clockr_conc clockr_kernel clockr_shell
+    TARGETS clockr clockr_mem clockr_conc clockr_kernel clockr_shell clockr_replay
     EXPORT clockrTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
