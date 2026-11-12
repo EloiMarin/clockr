@@ -164,6 +164,17 @@
         return response;
     }
 
+    function readStep(step) {
+        if (Array.isArray(step))
+            return {
+                note: Number(step[0]) || 0,
+                velocity: Number(step[1]) || 0,
+                gate: Boolean(step[2]),
+            };
+
+        return step || { note: 60, velocity: 0, gate: false };
+    }
+
     function renderScore(score) {
         const grid = $("grid");
         grid.replaceChildren();
@@ -180,7 +191,7 @@
             const pattern = score.patterns[track.pattern];
 
             for (let step = 0; step < 16; step += 1) {
-                const cell = pattern.steps[step] || { note: 60, velocity: 0, gate: false };
+                const cell = readStep(pattern.steps[step]);
                 const button = document.createElement("button");
                 button.className = "step" + (cell.gate ? " on" : "");
                 button.textContent = cell.gate ? String(cell.note) : "·";
@@ -774,6 +785,12 @@
         if (!Array.isArray(ticks) || ticks.length === 0) {
             showResult(`No ${label} ticks to audition yet.`, "err");
             return;
+        }
+
+        if (live.playing) {
+            setPlayLabel(false);
+            stopLiveAudio();
+            await pushIntents();
         }
 
         stopAudition();
