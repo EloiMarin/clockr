@@ -126,6 +126,10 @@ server.listen(0, "127.0.0.1", async () => {
         const stepped = parse(rpc("step", 4));
         check("worker steps audio blocks", stepped && stepped.ticks.length === 4);
 
+        const past = parse(rpc("replayBlockJson", 1));
+        check("worker replays a past block", past && past.ok === true
+            && past.ticks.length === 2);
+
         const exported = parse(rpc("exportScenarioJson"));
         check("worker exports a scenario", exported && exported.version === "clockr.replay.v1");
 

@@ -18,6 +18,7 @@
         "exportScenarioJson",
         "importScenarioJson",
         "replayBranchJson",
+        "replayBlockJson",
         "compareWithOriginalJson",
         "reset",
     ]);

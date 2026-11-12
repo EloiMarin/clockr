@@ -68,9 +68,14 @@
         rawTicks: [],
         state: null,
         branch: null,
+        history: null,
         selected: null,
         playing: false,
         blockMs: (1024 / 48000) * 1000,
+        playOriginFrame: null,
+        playOriginTime: 0,
+        liveNodes: [],
+        scrubbing: false,
     };
 
     async function boot() {
@@ -106,6 +111,7 @@
         const beat = (beats % 4) + 1;
         $("pos-value").textContent = `${bar}.${beat.toFixed(2)}`;
         updateCursors(beats, uiBeats);
+        renderHistory(state);
     }
 
     function syncTransport(state) {
@@ -178,8 +184,13 @@
                 const button = document.createElement("button");
                 button.className = "step" + (cell.gate ? " on" : "");
                 button.textContent = cell.gate ? String(cell.note) : "·";
-                button.title = `track ${trackIndex + 1} step ${step}`;
-                button.addEventListener("click", () => selectStep(trackIndex, step, pattern, cell));
+                button.title = `track ${trackIndex + 1} step ${step} (shift-click to select)`;
+                button.addEventListener("click", (event) => {
+                    if (event.shiftKey)
+                        selectStep(trackIndex, step, pattern, cell);
+                    else
+                        toggleStep(trackIndex, step, pattern, cell).catch(report);
+                });
                 row.append(button);
             }
 
@@ -200,6 +211,26 @@
         highlightSelection();
     }
 
+    async function toggleStep(trackIndex, step, pattern, cell) {
+        if (live.history) {
+            showResult(
+                "Viewing the past is read-only. Return to live to edit, or " +
+                "fork at the selected block.", "err"
+            );
+            return;
+        }
+
+        selectStep(trackIndex, step, pattern, cell);
+
+        const engage = !cell.gate;
+        $("gate-input").checked = engage;
+
+        if (engage && !(Number($("velocity-input").value) > 0))
+            $("velocity-input").value = "96";
+
+        await applyStep(engage);
+    }
+
     function highlightSelection() {
         const rows = $("grid").querySelectorAll(".track-row");
 
@@ -214,6 +245,14 @@
     }
 
     async function applyStep(gate) {
+        if (live.history) {
+            showResult(
+                "Viewing the past is read-only. Return to live to edit, or " +
+                "fork at the selected block.", "err"
+            );
+            return;
+        }
+
         if (!live.selected) {
             showResult("Select a step first.", "err");
             return;
@@ -247,7 +286,10 @@
     async function refreshState() {
         const state = JSON.parse(await call("getStateJson"));
         applyState(state);
-        renderScore(state.score);
+
+        if (!live.history)
+            renderScore(state.score);
+
         return state;
     }
 
@@ -255,7 +297,95 @@
         const result = JSON.parse(await call("step", count));
         collectRaw(result.ticks);
         applyState({ ...live.state, ...result, journal: live.state.journal });
+        scheduleLive(result.ticks);
         return result;
+    }
+
+    function renderHistory(state) {
+        const history = state && state.history ? state.history : { blocks: 0, patches: [] };
+        const range = $("history-range");
+        const marks = $("history-marks");
+
+        if (!range || !marks)
+            return;
+
+        const lastBlock = Math.max(0, history.blocks - 1);
+        const selectedBlock = live.history
+            ? Math.min(live.history.block, lastBlock)
+            : lastBlock;
+
+        range.max = String(lastBlock);
+
+        if (!live.scrubbing)
+            range.value = String(selectedBlock);
+
+        marks.replaceChildren();
+
+        const total = Math.max(1, history.blocks);
+
+        for (const patch of history.patches || []) {
+            const mark = document.createElement("button");
+            mark.className = "history-mark";
+            mark.style.left = `${(patch.block / total) * 100}%`;
+            mark.title =
+                `revision ${patch.revision} at block ${patch.block} ` +
+                `(entry ${patch.entry})`;
+            mark.addEventListener("click", () => {
+                selectHistoryBlock(patch.block).catch(report);
+            });
+            marks.append(mark);
+        }
+
+        $("history-label").textContent = live.history
+            ? `viewing block ${live.history.block} · cut ${live.history.cut}`
+            : `live · ${history.blocks} block${history.blocks === 1 ? "" : "s"}`;
+    }
+
+    async function selectHistoryBlock(block) {
+        if (!live.state)
+            return;
+
+        live.scrubbing = false;
+
+        if (live.playing) {
+            setPlayLabel(false);
+            stopLiveAudio();
+            await pushIntents();
+        }
+
+        const response = JSON.parse(await call("replayBlockJson", block));
+
+        if (response.ok === false) {
+            showResult(response.error, "err");
+            return;
+        }
+
+        live.history = response;
+        renderHistory(live.state);
+        renderScore(response.score);
+        $("history-range").value = String(response.block);
+        showResult(
+            `Replaying through block ${response.block} ` +
+            `(${response.patches} revision${response.patches === 1 ? "" : "s"}). ` +
+            `"Audition selected" listens to this prefix; "Fork" cuts here.`,
+            "ok"
+        );
+    }
+
+    function returnToLive() {
+        live.history = null;
+        renderHistory(live.state);
+
+        if (live.state)
+            renderScore(live.state.score);
+
+        showResult("Back at the live revision.");
+    }
+
+    async function auditionSelected() {
+        const ticks = live.history ? live.history.ticks : live.rawTicks;
+        const label = live.history ? `block ${live.history.block}` : "raw";
+        await audition(ticks, label);
     }
 
     function collectRaw(ticks) {
@@ -326,7 +456,17 @@
     }
 
     $("play-btn").addEventListener("click", async () => {
-        setPlayLabel(!live.playing);
+        const playing = !live.playing;
+        setPlayLabel(playing);
+
+        if (playing) {
+            await ensureAudio();
+            live.playOriginFrame = null;
+            live.playOriginTime = 0;
+        } else {
+            stopLiveAudio();
+        }
+
         await pushIntents();
     });
 
@@ -339,8 +479,15 @@
     $("loop-start").addEventListener("change", () => { pushIntents().catch(report); });
     $("loop-end").addEventListener("change", () => { pushIntents().catch(report); });
 
-    $("apply-step").addEventListener("click", () => { applyStep(true).catch(report); });
-    $("clear-step").addEventListener("click", () => { applyStep(false).catch(report); });
+    $("note-input").addEventListener("change", () => {
+        applyStep($("gate-input").checked).catch(report);
+    });
+    $("velocity-input").addEventListener("change", () => {
+        applyStep($("gate-input").checked).catch(report);
+    });
+    $("gate-input").addEventListener("change", () => {
+        applyStep($("gate-input").checked).catch(report);
+    });
 
     $("take-btn").addEventListener("click", async () => {
         try {
@@ -350,7 +497,10 @@
             ));
             live.rawTicks = [];
             live.branch = null;
+            live.history = null;
             live.selected = null;
+            stopLiveAudio();
+            stopAudition();
             applyState(state);
             renderScore(state.score);
             await pushIntents();
@@ -365,8 +515,11 @@
             const state = JSON.parse(await call("reset"));
             live.rawTicks = [];
             live.branch = null;
+            live.history = null;
             live.selected = null;
             setPlayLabel(false);
+            stopLiveAudio();
+            stopAudition();
             applyState(state);
             syncTransport(state);
             renderScore(state.score);
@@ -403,6 +556,10 @@
             }
 
             live.branch = null;
+            live.history = null;
+            live.selected = null;
+            stopLiveAudio();
+            stopAudition();
             showResult(
                 `Imported ${response.entries} entries · ${response.digest} · ` +
                 `fidelity ${response.fidelity.complete ? "complete" : "incomplete"}.`,
@@ -416,9 +573,14 @@
 
     $("fork-btn").addEventListener("click", async () => {
         try {
+            const edit = JSON.parse($("patch-text").value);
+
+            if (live.history)
+                edit.cut = live.history.cut;
+
             const response = JSON.parse(await call(
                 "replayBranchJson",
-                $("patch-text").value
+                JSON.stringify(edit)
             ));
 
             if (response.ok === false) {
@@ -477,13 +639,96 @@
         audition(live.branch.candidateTicks, "candidate").catch(report);
     });
 
-    $("stop-audio").addEventListener("click", stopAudition);
+    $("audition-selected").addEventListener("click", () => {
+        auditionSelected().catch(report);
+    });
+
+    $("history-range").addEventListener("input", () => {
+        const block = Number($("history-range").value);
+        live.scrubbing = true;
+        $("history-label").textContent = `scrub to block ${block}`;
+    });
+
+    $("history-range").addEventListener("change", () => {
+        selectHistoryBlock(Number($("history-range").value)).catch(report);
+    });
+
+    $("history-live").addEventListener("click", returnToLive);
+
+    $("stop-audio").addEventListener("click", () => {
+        stopAudition();
+        stopLiveAudio();
+    });
 
     let audio = null;
     let audioNodes = [];
 
-    function stopAudition() {
-        for (const node of audioNodes) {
+    async function ensureAudio() {
+        if (!audio)
+            audio = new AudioContext();
+
+        if (audio.state === "suspended")
+            await audio.resume();
+
+        return audio;
+    }
+
+    function scheduleNote(event, at, nodes) {
+        const when = Math.max(at, audio.currentTime + 0.005);
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        const frequency = 440 * Math.pow(2, (event.note - 69) / 12);
+        const level = Math.max(0.012, (event.velocity / 127) * 0.12);
+
+        osc.type = ["triangle", "sine", "square", "sawtooth"][(event.track || 0) % 4];
+        osc.frequency.setValueAtTime(frequency, when);
+        gain.gain.setValueAtTime(0.0001, when);
+        gain.gain.exponentialRampToValueAtTime(level, when + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.20);
+        osc.connect(gain).connect(audio.destination);
+        osc.start(when);
+        osc.stop(when + 0.22);
+        nodes.push(osc);
+
+        window.setTimeout(() => {
+            const index = nodes.indexOf(osc);
+            if (index >= 0)
+                nodes.splice(index, 1);
+        }, 320);
+    }
+
+    function scheduleTicks(ticks, baseTime, baseFrame, nodes, maxSeconds, maxNotes) {
+        let scheduled = 0;
+        const horizon = baseTime + maxSeconds;
+
+        for (const tick of ticks) {
+            const rate = tick.rate || 48000;
+            const base = baseTime + (tick.start - baseFrame) / rate;
+
+            if (base > horizon)
+                break;
+
+            const events = Array.isArray(tick.events) ? tick.events : [];
+
+            for (const event of events) {
+                if (!event.on || scheduled >= maxNotes)
+                    continue;
+
+                const at = base + (event.offset || 0) / rate;
+
+                if (at > horizon)
+                    break;
+
+                scheduleNote(event, at, nodes);
+                scheduled += 1;
+            }
+        }
+
+        return scheduled;
+    }
+
+    function stopNodes(nodes) {
+        for (const node of nodes) {
             try {
                 node.stop();
             } catch {
@@ -491,7 +736,38 @@
             }
         }
 
-        audioNodes = [];
+        nodes.length = 0;
+    }
+
+    function stopAudition() {
+        stopNodes(audioNodes);
+    }
+
+    function stopLiveAudio() {
+        stopNodes(live.liveNodes);
+        live.playOriginFrame = null;
+        live.playOriginTime = 0;
+    }
+
+    function scheduleLive(ticks) {
+        if (!live.playing || !audio || !Array.isArray(ticks) || ticks.length === 0)
+            return;
+
+        const first = ticks[0];
+
+        if (live.playOriginFrame === null) {
+            live.playOriginFrame = first.start;
+            live.playOriginTime = audio.currentTime + 0.08;
+        }
+
+        scheduleTicks(
+            ticks,
+            live.playOriginTime,
+            live.playOriginFrame,
+            live.liveNodes,
+            10,
+            256
+        );
     }
 
     async function audition(ticks, label) {
@@ -501,52 +777,17 @@
         }
 
         stopAudition();
-
-        if (!audio)
-            audio = new AudioContext();
-
-        await audio.resume();
+        await ensureAudio();
 
         const first = ticks[0];
-        const rate = first.rate || 48000;
-        const now = audio.currentTime + 0.08;
-        const maxSeconds = 12;
-        let scheduled = 0;
-
-        for (const tick of ticks) {
-            const base = (tick.start - first.start) / rate;
-
-            if (base > maxSeconds)
-                break;
-
-            const events = Array.isArray(tick.events) ? tick.events : [];
-
-            for (const event of events) {
-                if (!event.on || scheduled >= 512)
-                    continue;
-
-                const at = now + base + (event.offset || 0) / rate;
-
-                if (at > now + maxSeconds)
-                    break;
-
-                const osc = audio.createOscillator();
-                const gain = audio.createGain();
-                const frequency = 440 * Math.pow(2, (event.note - 69) / 12);
-                const level = Math.max(0.012, (event.velocity / 127) * 0.12);
-
-                osc.type = ["triangle", "sine", "square", "sawtooth"][(event.track || 0) % 4];
-                osc.frequency.setValueAtTime(frequency, at);
-                gain.gain.setValueAtTime(0.0001, at);
-                gain.gain.exponentialRampToValueAtTime(level, at + 0.008);
-                gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.20);
-                osc.connect(gain).connect(audio.destination);
-                osc.start(at);
-                osc.stop(at + 0.22);
-                audioNodes.push(osc);
-                scheduled += 1;
-            }
-        }
+        const scheduled = scheduleTicks(
+            ticks,
+            audio.currentTime + 0.08,
+            first.start,
+            audioNodes,
+            12,
+            512
+        );
 
         showResult(`Auditioning ${scheduled} ${label} note events.`, "ok");
     }

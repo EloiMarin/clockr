@@ -163,8 +163,60 @@ button:hover { border-color: var(--accent); }
     width: 2px;
 }
 
-.cursor.raw { background: var(--warm); }
-.cursor.ui { background: var(--accent); width: 4px; }
+.cursor.raw {
+    background: var(--warm);
+    width: 2px;
+    z-index: 2;
+    box-shadow: 0 0 6px rgba(240, 180, 107, 0.75);
+}
+
+.cursor.ui {
+    background: var(--accent);
+    width: 1px;
+    opacity: 0.55;
+    z-index: 1;
+}
+
+.history-lane {
+    position: relative;
+    padding-top: 0.45rem;
+}
+
+.history-marks {
+    position: relative;
+    height: 0.85rem;
+    margin: 0 0.35rem;
+}
+
+.history-mark {
+    position: absolute;
+    top: 0;
+    width: 0.55rem;
+    height: 0.55rem;
+    padding: 0;
+    margin-left: -0.275rem;
+    border-radius: 999px;
+    border: 1px solid var(--warm);
+    background: rgba(240, 180, 107, 0.55);
+}
+
+.history-mark:hover {
+    background: var(--warm);
+    border-color: var(--warm);
+}
+
+#history-range {
+    width: 100%;
+    accent-color: var(--accent);
+}
+
+.history-foot {
+    display: flex;
+    gap: 0.7rem;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.35rem;
+}
 
 .hint { margin: 0.65rem 0 0; color: var(--dim); font-size: 0.82rem; }
 

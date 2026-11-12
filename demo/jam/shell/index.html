@@ -58,9 +58,10 @@
         <div id="cursor-raw" class="cursor raw"></div>
         <div id="cursor-ui" class="cursor ui"></div>
       </div>
-      <p class="hint">The thick cursor is the ui region's latest sample of the
-      audio playhead (<code>playhead_ui</code>); the thin one is the audio
-      region's own <code>playhead</code>.</p>
+      <p class="hint">Play advances the conductor in real time and schedules
+      the returned note events through WebAudio. The warm cursor is the audio
+      region's own <code>playhead</code>; the thin teal one is the ui region's
+      latest sample (<code>playhead_ui</code>).</p>
     </section>
 
     <section class="panel timeline-panel">
@@ -70,9 +71,19 @@
         <div><span class="readout-label">journal entries</span><span id="entries-value" class="mono">0</span></div>
         <div><span class="readout-label">fork</span><span id="branch-value" class="mono">—</span></div>
       </div>
-      <p class="hint">Branches cut at a boundary journal entry, not at a bar.
-      The patch in the fork panel is inserted at the chosen cut; the original
-      journal is never mutated.</p>
+      <div class="history-lane">
+        <div id="history-marks" class="history-marks"></div>
+        <input id="history-range" type="range" min="0" max="0" step="1" value="0"
+               aria-label="Replay history through an audio block">
+      </div>
+      <div class="history-foot">
+        <span id="history-label" class="dim">live</span>
+        <button id="history-live" class="ghost-btn">return to live</button>
+      </div>
+      <p class="hint">Drag or click the lane to replay through a past audio
+      block; orange marks are revision edits. Viewing the past is read-only.
+      Fork uses the selected cut, so you can branch from any visited moment.
+      The original journal is never mutated.</p>
     </section>
   </div>
 
@@ -84,8 +95,7 @@
       <label>note <input id="note-input" type="number" class="mono" min="0" max="127" value="60"></label>
       <label>velocity <input id="velocity-input" type="number" class="mono" min="0" max="127" value="96"></label>
       <label class="toggle"><input id="gate-input" type="checkbox" checked> gate</label>
-      <button id="apply-step" class="mid-btn">apply step</button>
-      <button id="clear-step" class="mid-btn">clear step</button>
+      <span class="dim">click toggles a step; shift-click selects without toggling</span>
     </div>
   </section>
 
@@ -97,6 +107,7 @@
       <button id="fork-btn" class="mid-btn">Fork / replay patch</button>
       <button id="compare-btn" class="mid-btn">Compare original</button>
       <button id="audition-raw" class="mid-btn">Audition raw</button>
+      <button id="audition-selected" class="mid-btn">Audition selected</button>
       <button id="audition-candidate" class="mid-btn">Audition candidate</button>
       <button id="stop-audio" class="ghost-btn">Stop audio</button>
     </div>

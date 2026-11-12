@@ -3086,6 +3086,117 @@ public:
     }
 
     std::string
+    replay_block_json(double block_number) const
+    {
+        const replay::scenario& base_scenario {
+            m_imported_scenario ? *m_imported_scenario : recorded_scenario()
+        };
+        const jam::score& base_score {
+            m_imported_scenario ? m_imported_score : m_initial
+        };
+
+        std::vector<replay::entry_id> audio_steps;
+
+        for (const auto& entry : base_scenario.entries)
+            if (entry.kind == replay::entry_kind::step_region &&
+                entry.clock == clock_tag::audio)
+                audio_steps.push_back(entry.id);
+
+        if (audio_steps.empty())
+            return make_error_json("the journal has no audio block to replay");
+
+        std::size_t index { 0 };
+
+        if (std::isfinite(block_number) && block_number >= 0.0)
+            index = static_cast<std::size_t>(std::min<std::uint64_t>(
+                static_cast<std::uint64_t>(block_number),
+                audio_steps.size() - 1
+            ));
+
+        const auto cut { audio_steps[index] };
+        replay::scenario prefix { base_scenario };
+        prefix.entries.erase(
+            std::remove_if(
+                prefix.entries.begin(),
+                prefix.entries.end(),
+                [cut](const replay::scenario_entry& entry) {
+                    return entry.id > cut;
+                }
+            ),
+            prefix.entries.end()
+        );
+        prefix.base_entry = cut;
+
+        replay::run run;
+
+        try
+        {
+            run = replay_with_score(prefix, base_score);
+        }
+        catch (const std::exception& exception)
+        {
+            return make_error_json(
+                std::string { "prefix replay failed: " } + exception.what()
+            );
+        }
+        catch (...)
+        {
+            return make_error_json("prefix replay failed");
+        }
+
+        if (run.aborted || !run.fidelity.complete)
+        {
+            auto message { std::string { "prefix is not replayable" } };
+
+            if (!run.fidelity.reason.empty())
+                message += ": " + run.fidelity.reason;
+
+            return make_error_json(message);
+        }
+
+        jam::score score_at { base_score };
+        std::uint64_t patches { 0 };
+
+        for (const auto& entry : prefix.entries)
+        {
+            if (entry.kind != replay::entry_kind::set_input ||
+                entry.port != "patch")
+                continue;
+
+            jam::score_patch patch {};
+
+            if (user_bytes_as(entry.value, patch))
+            {
+                score_at = jam::apply(score_at, patch);
+                ++patches;
+            }
+        }
+
+        bool truncated { false };
+
+        std::string out { "{\"ok\":true,\"block\":" };
+        append_uint(out, index);
+        out += ",\"blocks\":";
+        append_uint(out, audio_steps.size());
+        out += ",\"cut\":";
+        append_uint(out, cut.value);
+        out += ",\"entries\":";
+        append_uint(out, prefix.entries.size());
+        out += ",\"patches\":";
+        append_uint(out, patches);
+        out += ",\"digest\":\"";
+        out += digest_hex(run_digest(run));
+        out += "\",\"score\":";
+        append_score(out, score_at);
+        out += ",\"ticks\":";
+        out += audio_ticks_json(prefix, run, max_branch_ticks, truncated);
+        out += ",\"truncated\":";
+        append_bool(out, truncated);
+        out.push_back('}');
+        return out;
+    }
+
+    std::string
     reset()
     {
         m_intents = intents {};
@@ -3251,10 +3362,60 @@ private:
         m_live_run.steps.push_back(std::move(record));
     }
 
-    [[nodiscard]] replay::scenario
+    [[nodiscard]] const replay::scenario&
     recorded_scenario() const
     {
         return m_session->recorded();
+    }
+
+    static std::string
+    history_json(const replay::scenario& scenario)
+    {
+        std::uint64_t blocks { 0 };
+
+        for (const auto& entry : scenario.entries)
+            if (entry.kind == replay::entry_kind::step_region &&
+                entry.clock == clock_tag::audio)
+                ++blocks;
+
+        std::string out { "{\"blocks\":" };
+        append_uint(out, blocks);
+        out += ",\"patches\":[";
+
+        bool first { true };
+        std::uint64_t seen_blocks { 0 };
+        std::uint64_t revision { 0 };
+
+        for (const auto& entry : scenario.entries)
+        {
+            if (entry.kind == replay::entry_kind::step_region &&
+                entry.clock == clock_tag::audio)
+            {
+                ++seen_blocks;
+                continue;
+            }
+
+            if (entry.kind != replay::entry_kind::set_input ||
+                entry.port != "patch")
+                continue;
+
+            ++revision;
+
+            if (!first)
+                out.push_back(',');
+
+            first = false;
+            out += "{\"revision\":";
+            append_uint(out, revision);
+            out += ",\"block\":";
+            append_uint(out, seen_blocks);
+            out += ",\"entry\":";
+            append_uint(out, entry.id.value);
+            out.push_back('}');
+        }
+
+        out += "]}";
+        return out;
     }
 
     static std::uint64_t
@@ -3292,7 +3453,10 @@ private:
     }
 
     replay::run
-    replay_with_score(const replay::scenario& scenario, const jam::score& score)
+    replay_with_score(
+        const replay::scenario& scenario,
+        const jam::score& score
+    ) const
     {
         const auto recipe { jam::net::app(score) };
         replay::native::recipe_factory factory { recipe };
@@ -3336,7 +3500,16 @@ private:
     state_json() const
     {
         const auto outputs { read_tick_outputs(*m_program) };
-        const auto recorded { recorded_scenario() };
+        const replay::scenario& recorded {
+            m_imported_scenario ? *m_imported_scenario : recorded_scenario()
+        };
+
+        std::uint64_t patches { 0 };
+
+        for (const auto& entry : recorded.entries)
+            if (entry.kind == replay::entry_kind::set_input &&
+                entry.port == "patch")
+                ++patches;
 
         std::string out { "{\"ok\":true,\"initialized\":" };
         append_bool(out, m_initialized);
@@ -3392,10 +3565,12 @@ private:
         out += ",\"entries\":";
         append_uint(out, recorded.entries.size());
         out += ",\"patches\":";
-        append_uint(out, m_patch_count);
+        append_uint(out, patches);
         out += ",\"complete\":";
         append_bool(out, recorded.fidelity.complete);
-        out += "},\"imported\":";
+        out += "},\"history\":";
+        out += history_json(recorded);
+        out += ",\"imported\":";
         append_bool(out, m_imported_scenario.has_value());
         out += ",\"branchRun\":";
         append_bool(out, m_branch_run.has_value());
@@ -3448,6 +3623,7 @@ EMSCRIPTEN_BINDINGS(jam_shell)
         .function("exportScenarioJson", &jam_shell::export_scenario_json)
         .function("importScenarioJson", &jam_shell::import_scenario_json)
         .function("replayBranchJson", &jam_shell::replay_branch_json)
+        .function("replayBlockJson", &jam_shell::replay_block_json)
         .function(
             "compareWithOriginalJson", &jam_shell::compare_with_original_json
         )

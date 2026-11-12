@@ -77,6 +77,24 @@ factory().then((module) => {
         patchedNotes.join(",") !== baselineNotes.join(",")
     );
 
+    const stateAfterRun = parse(shell.getStateJson(), "state after run");
+    check("state exposes a block timeline", stateAfterRun.history
+        && stateAfterRun.history.blocks === 40);
+    check("timeline marks the revision", stateAfterRun.history.patches.length === 1
+        && stateAfterRun.history.patches[0].revision === 1);
+
+    const past = parse(shell.replayBlockJson(4), "past replay");
+    check("past block reaches a prefix", past.ok === true && past.block === 4);
+    check("past prefix stops at the cut", past.blocks === 40
+        && past.ticks.length === 5);
+    check("past prefix has no revision", past.patches === 0);
+    check("past prefix reports a score", past.score
+        && past.score.patterns[0].steps[0][0] === originalNote);
+
+    const pastHead = parse(shell.replayBlockJson(39), "past head");
+    check("past head includes the revision", pastHead.ok === true
+        && pastHead.patches === 1 && pastHead.ticks.length === 40);
+
     const exportedText = shell.exportScenarioJson();
     const exported = parse(exportedText, "exported scenario");
     check("scenario version", exported.version === "clockr.replay.v1");
