@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{name}} — live demos</title>
-<meta name="description" content="The DAWmulator and its live debugger, in this browser or on the live host.">
+<meta name="description" content="The DAWmulator and its debugger, running in this browser.">
 <link rel="icon" href="../clockr-mark.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../style.css">
 </head>
@@ -16,13 +16,6 @@
     <a href="../">Home</a>
     <a href="./" aria-current="page">Demos</a>
     <a href="../docs/">Docs</a>
-    <label class="view-switch runtime-switch" title="Run the demo in this browser, or against the live host">
-      <span>Runtime</span>
-      <select id="demo-runtime">
-        <option value="local">In-browser</option>
-        <option value="live">Live host</option>
-      </select>
-    </label>
     <label class="view-switch" title="Show the debugger beside the DAWmulator">
       <input type="checkbox" id="show-debugger" role="switch">
       <span>Show debugger</span>
@@ -46,7 +39,6 @@
 <script>
 (() => {
   const STORAGE_KEY = "clockr.demo.split";
-  const RUNTIME_KEY = "clockr.demo.runtime";
   const MIN_PANE_PX = 280;
   const stackedQuery = window.matchMedia("(max-width: 720px)");
 
@@ -54,12 +46,6 @@
   const frame = document.getElementById("debugger-frame");
   const grid = document.getElementById("demo-grid");
   const splitter = document.getElementById("demo-splitter");
-  const runtime = document.getElementById("demo-runtime");
-  const panes = [...document.querySelectorAll("iframe[data-local-src], iframe[data-live-src]")];
-  const localAvailable = panes.length > 0
-    && panes.every((pane) => Boolean(pane.dataset.localSrc));
-  const liveAvailable = panes.length > 0
-    && panes.every((pane) => Boolean(pane.dataset.liveSrc));
 
   if (!toggle)
     return;
@@ -90,105 +76,6 @@
     catch
     {
       // Private browsing or a disabled store: the split still works this visit.
-    }
-  }
-
-  function readRuntime()
-  {
-    const query = new URLSearchParams(location.search).get("runtime");
-
-    if (query === "local" || query === "wasm")
-      return "local";
-    if (query === "live")
-      return "live";
-
-    try
-    {
-      const stored = localStorage.getItem(RUNTIME_KEY);
-      if (stored === "local" && localAvailable)
-        return stored;
-      if (stored === "live" && liveAvailable)
-        return stored;
-    }
-    catch
-    {
-      // Private browsing or a disabled store: the default still works.
-    }
-
-    // The in-browser runtime is the resilient default; the live host remains
-    // one switch away when it is part of the build.
-    return localAvailable ? "local" : "live";
-  }
-
-  function applyRuntime(value, updateUrl = true, persist = true)
-  {
-    if (value === "local" && !localAvailable)
-      value = "live";
-    if (value === "live" && !liveAvailable)
-      value = "local";
-
-    if (runtime)
-    {
-      runtime.value = value;
-      runtime.disabled = !(localAvailable && liveAvailable);
-
-      for (const option of runtime.options)
-      {
-        option.disabled = (option.value === "local" && !localAvailable)
-          || (option.value === "live" && !liveAvailable);
-      }
-    }
-
-    for (const pane of panes)
-    {
-      const target = value === "local" ? pane.dataset.localSrc : pane.dataset.liveSrc;
-
-      if (!target)
-        continue;
-
-      if (pane.id === "debugger-frame" && !document.body.classList.contains("show-debugger"))
-      {
-        // A hidden debugger stays unloaded; setShown() uses data-src later.
-        pane.dataset.src = target;
-        if (pane.hasAttribute("src"))
-          pane.setAttribute("src", target);
-      }
-      else if (pane.getAttribute("src") !== target)
-      {
-        pane.setAttribute("src", target);
-      }
-    }
-
-    for (const link of document.querySelectorAll(".demo-open"))
-    {
-      const href = value === "local" ? link.dataset.localHref : link.dataset.liveHref;
-
-      if (href)
-        link.setAttribute("href", href);
-    }
-
-    if (persist)
-    {
-      try
-      {
-        localStorage.setItem(RUNTIME_KEY, value);
-      }
-      catch
-      {
-        // The switch still works for this visit.
-      }
-    }
-
-    if (updateUrl)
-    {
-      const url = new URL(location.href);
-
-      if (value === "local")
-        url.searchParams.delete("runtime");
-      else
-        url.searchParams.set("runtime", value);
-
-      history.replaceState(null, "", url);
     }
   }
 
@@ -341,18 +228,6 @@
   }
 
   window.addEventListener("resize", () => renderSplit(false));
-
-  if (runtime)
-  {
-    const label = runtime.closest("label");
-
-    if (label)
-      label.hidden = !(localAvailable || liveAvailable);
-
-    runtime.addEventListener("change", () => applyRuntime(runtime.value));
-  }
-
-  applyRuntime(readRuntime(), false, false);
 
   const params = new URLSearchParams(location.search);
   setShown(params.get("debugger") === "1", false);

@@ -2,8 +2,8 @@
 // Stage the deployable site into tools/website/_site: the landing page, the
 // demo page (DAWmulator first, debugger on a switch), the documentation pages,
 // the 404 page, the license and the landing-page animation (wasm shell +
-// renderers, when emscripten is available). An externally hosted live pair is
-// baked into the demo page through DEBUGGER_URL and DAW_URL when provided.
+// renderers, when emscripten is available). When no in-browser pair is staged,
+// an externally hosted live pair can fill in through DEBUGGER_URL and DAW_URL.
 //
 //   node scripts/build.mjs
 //   DEBUGGER_URL=https://debugger.example.com DAW_URL=https://daw.example.com npm run build
@@ -83,14 +83,6 @@ function demoPane({
     const preferred = local || live;
     const source = defer ? `data-src="${preferred}"` : `src="${preferred}"`;
     const id = iframeId ? ` id="${iframeId}"` : "";
-    const variants = [
-        local ? ` data-local-src="${local}"` : "",
-        live ? ` data-live-src="${live}"` : "",
-    ].join("");
-    const links = [
-        local ? ` data-local-href="${local}"` : "",
-        live ? ` data-live-href="${live}"` : "",
-    ].join("");
 
     return `<article class="${paneClasses}">
   <div class="demo-pane-head">
@@ -98,10 +90,10 @@ function demoPane({
       <h2>${title}</h2>
       <p>${description}</p>
     </div>
-    <a class="demo-open" href="${preferred}"${links} target="_blank" rel="noopener">Full screen ↗</a>
+    <a class="demo-open" href="${preferred}" target="_blank" rel="noopener">Full screen ↗</a>
   </div>
   <div class="demo-frame">
-    <iframe${id}${variants} ${source} title="${iframeTitle}" loading="eager"></iframe>
+    <iframe${id} ${source} title="${iframeTitle}" loading="eager"></iframe>
   </div>
 </article>`;
 }
@@ -110,7 +102,7 @@ function dawPane(liveUrl, localUrl)
 {
     return demoPane({
         title: "DAWmulator",
-        description: "A transport, scheduler and voice on real ui and audio clocks — in this browser, or on the live host.",
+        description: "A transport, scheduler and voice on real ui and audio clocks — in this browser.",
         liveUrl,
         localUrl,
         envName: "DAW_URL",
@@ -122,7 +114,7 @@ function debuggerPane(liveUrl, localUrl)
 {
     return demoPane({
         title: "Debugger",
-        description: "Graph, timeline and node cursor over the same live program's trace.",
+        description: "Graph, timeline and node cursor over the same program's trace.",
         liveUrl,
         localUrl,
         envName: "DEBUGGER_URL",

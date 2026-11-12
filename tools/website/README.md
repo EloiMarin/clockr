@@ -3,12 +3,10 @@
 A landing page for `clockr`, a dedicated demo page (DAWmulator first, debugger
 on a switch), plus the published documentation and in-browser demos.
 
-The demo page has a Runtime selector: the in-browser wasm DAWmulator and
-debugger (staged by the static build) or an externally hosted live pair. A
-build that stages the wasm pair defaults to it (or `?runtime=local`); select
-Live (or add `?runtime=live`) when the build also has live endpoints. The
-in-browser pair needs no server, so the demo works even when the live host or
-the network is down.
+The demo page runs the in-browser wasm DAWmulator and debugger, staged by the
+static build. The in-browser pair needs no server, so the demo works without
+the network. When the build has no wasm pair, an externally hosted live pair
+can fill in instead (see below).
 
 `npm run build` stages everything into `_site/`, a self-contained static
 bundle. Deployment is intentionally kept out of this repository; point any
@@ -48,20 +46,21 @@ The static build stages the in-browser pair when Emscripten is available:
 debugger's local transport listens on the same-origin
 `clockr.debug.local` BroadcastChannel, which the wasm worker feeds with the
 same graph and event shape the native server sends — no sockets, server or
-protobuf on that path. It is the demo page's default runtime when the build
-contains it.
+protobuf on that path. It is what the demo page runs when the build contains
+it.
 
-To point the demo page at an externally hosted live pair instead, build with
-their origins:
+When the build has no in-browser pair, the demo page can fall back to an
+externally hosted live pair; build with their origins:
 
 ```bash
 DEBUGGER_URL=https://debugger.example.com \
 DAW_URL=https://daw.example.com npm run build
 ```
 
-The `/demo/` page embeds those URLs, so each iframe's `/ws` connection must be
-same-origin with the document that proves the live endpoints. The live host
-runs the native DAWmulator on 9003 and its embedded debugger server on 9002.
+The `/demo/` page embeds those URLs only when no in-browser pair is staged, so
+each iframe's `/ws` connection must be same-origin with the document that
+proves the live endpoints. The live host runs the native DAWmulator on 9003 and
+its embedded debugger server on 9002.
 
 ## Prerequisites
 
@@ -89,10 +88,10 @@ npm run build            # landing page + demo page + docs + wasm demos
 npm run serve            # http://127.0.0.1:4173/demo/
 ```
 
-The demo page defaults to the in-browser runtime. To also preview against a
-native demo running on this machine, start it and build with its two origins
-(the same process serves the DAW page and its embedded debugger); select
-Runtime → Live or add `?runtime=live`:
+The demo page runs the in-browser pair. To preview the live fallback on this
+machine, start the native demo and build without Emscripten on `PATH` (so the
+wasm pair is not staged); the same process serves the DAW page and its
+embedded debugger:
 
 ```bash
 ./_build/linux_x64_debug/demo/daw/native/dawmulator_native --open
@@ -171,7 +170,7 @@ tools/website/
     src/cursor_clocks.cpp   the dial recipe (ported from the lab)
   site/
     index.template.html     landing page (placeholders filled by build.mjs)
-    demo.template.html      demo page at /demo/ (runtime + debugger switches)
+    demo.template.html      demo page at /demo/ (debugger switch)
     style.css               site, demo, 404 and docs styling (Terminal Dusk tokens)
     clockr-mark.svg        standalone multi-clock icon and favicon
     clockr-logo.svg        horizontal lockup with an outlined wordmark
