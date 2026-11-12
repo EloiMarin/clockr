@@ -268,6 +268,13 @@ The single `kernel::program` plane supports an owning recipe and a borrowing des
 Named ports and user value types are complete.
 User value types include inline PODs or pool cells, with debug schemas.
 `engine::step` is allocation-free. The live debugger and its write-back path are complete.
+`clockr::replay` is an opt-in module: immutable scenarios, boundary journaling,
+host-registered value codecs, fresh-program replay, branch edits, and semantic
+run comparison. The DAW and the jam both replay recorded sessions through the
+ordinary engine.
+`demo/jam` exercises that substrate: a bounded score/patch model, a fixed
+editable network, a session/action log, deterministic metrics, a native
+conductor core, and a wasm shell/page.
 
 **Open.**
 
@@ -276,12 +283,14 @@ User value types include inline PODs or pool cells, with debug schemas.
 - **C4 common-clock sync.** This feature is on demand only.
   Regions tick their own epochs, and absolute time stays a host concern.
   Latency offsets can travel on `latest` ports.
-- **E1 determinism/replay check.** This `debug_engine` option ticks twice from identical state and inputs.
-  It compares the results to detect impure `tick_fn` functions.
+- **E1 determinism/replay check.** A replay-based check exists now:
+  replay the same scenario twice and `clockr::replay::compare` the runs.
+  Wiring this as a `debug_engine` convenience option remains open.
 - **E2 graph export.** This feature is a DOT or diagram writer over graph, regions, and sharing points.
   Node labels already travel through the descriptor.
-- **E3 time-travel replay.** This feature will scrub the trace and restore state slots.
-  The region-scoped, value-carrying trace has landed. Restore remains open.
+- **E3 time-travel replay.** Prefix replay and immutable branches have landed in
+  `clockr::replay`. Direct checkpoints that restore state slots for long
+  histories remain open; a checkpoint is an optimization, never new semantics.
 - **F1 bounded alternation.** This feature is a multiplexer over pre-instantiated branches.
 - **F2 structural rebuild.** Rebuild away from the audio thread and use a double-buffered topology swap.
   A stress test covers this feature instead of a unit spec.
@@ -289,8 +298,9 @@ User value types include inline PODs or pool cells, with debug schemas.
   It waits until a real application needs mutation that the F2 swap cannot express.
 - **H authoring sugar.** This feature includes named bundles over `zip` and `lift`, flat leaf spelling, NTTP deduction, and pipeline helpers.
   It is a surface-only layer and never a new kernel construct.
-- **I undo/snapshots.** This feature retains the existing plain tick state and restores it at a tick boundary.
-  It provides exact redo by L1 and shares E3's restore path.
+- **I undo/snapshots.** Undo as "replay to an entry" is available through
+  `clockr::replay`. Direct snapshots that retain and restore plain tick state at
+  a tick boundary remain open and share E3's checkpoint path.
 
 **Known refinements.**
 A `queued` drain currently consumes one event per consumer step instead of a batch.

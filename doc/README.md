@@ -30,6 +30,13 @@ with the options that were rejected and the reasons.
 [`explanation/operator-sufficiency.md`](explanation/operator-sufficiency.md)
 then asks the harder question: is the small operator set enough, and how far
 is it *allowed* to fall short.
+[`explanation/branchable-live-jam.md`](explanation/branchable-live-jam.md) is the
+design for demonstrating scenario replay and branching through a shared musical
+performance with agent-reviewed alternatives, followed by a second-priority
+concurrent transport/event-interleaving workbench. Its
+[implementation plan](explanation/branchable-live-jam-plan.md) records the
+landed replay substrate (`clockr::replay`), the jam domain, and the remaining
+gateway/MCP work.
 
 **"I need the exact meaning."**
 [`reference/denotational-semantics.md`](reference/denotational-semantics.md)

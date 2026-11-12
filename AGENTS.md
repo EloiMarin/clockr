@@ -100,11 +100,18 @@ Public headers live in `include/clockr/`; `src/` holds the matching
    `kernel::program`'s recipe constructor takes a shell recipe, so the *kernel*
    includes *shell* headers — a known layering smell, kept until phase F3; see
    the roadmap section of the root `README.md`).
+- `replay/` — an **opt-in** module built only on `kernel` (link
+  `clockr::replay` explicitly; the umbrella `clockr` target does not include
+  it). Scenario/run/branch identity, boundary journals (`session`), host
+  codecs (`value_codec`/`codec_registry`), fresh-program replay (`replayer`/
+  `program_factory`), and semantic comparison (`compare`). Replay re-executes
+  through `engine::step`; the lossy observer trace is never a journal and is
+  never replayed.
 
 `doc/` — the design documents, organised by genre (reading map:
 `doc/README.md`): `doc/learn/` (newcomer walkthroughs: `layering.md`),
 `doc/explanation/` (rationale: `frp-decisions.md`,
-`operator-sufficiency.md`), `doc/reference/`
+`operator-sufficiency.md`, and the branchable-live-jam design/plan), `doc/reference/`
 (`denotational-semantics.md`), `doc/how-to/` (`consuming.md`, `ci.md`),
 `doc/examples/` (small host programs), and `doc/archive/` (delivered talks and
 history). The canonical
@@ -137,7 +144,18 @@ Each node package runs its own `node test/*.test.ts` harness (no install).
 
 `tools/website/` (repo root) — the landing page, the demo page (DAWmulator first, debugger on a switch, and a runtime selector between the in-browser wasm pair and an externally hosted live pair), and the published design docs (design and usage: `tools/website/README.md`). The static site is staged by Node (landing page + `/demo/` page + `doc/`/`GLOSSARY.md` rendered under `/docs`) and also bundles a wasm animation built at site-build time with Emscripten: `tools/website/animation/` is the standalone Emscripten shell for the Cursor Clocks recipe, and `tools/website/site/animation/` holds the page-side renderers (cursor dial + ambient field, both behind the content). When Emscripten is available it also builds the DAWmulator shell and stages `/daw/` plus the debugger UI at `/debugger/`; the two talk over a same-origin BroadcastChannel, so the demo works without the live host. The build skips the animation with a warning when `emcmake` is unavailable. `site.config.json` holds the public name/copy and the source URL/blob prefix, so the site is not tied to GitHub; the build is forge-neutral. Hosting and deployment configuration are intentionally kept out of this repository. `tools/website/lab/` is the throwaway wasm animation lab with its own Emscripten build and `HANDOVER.md`; its Cursor Clocks sketch was promoted to the landing page, and the rest of its sketches are built and staged as the site's 404 gallery.
 
+`demo/jam/` (repo root) — the branchable-live-jam example (design/plan:
+`doc/explanation/branchable-live-jam*.md`): a bounded score/pattern/patch
+model (`jam/score.hpp`, `pattern.hpp`, `patch.hpp`), a fixed editable network
+(`jam/network.hpp`), a score `scan` seeded through `jam/seeded_scan.hpp`, a
+session/action log (`jam/session.hpp`), deterministic metrics
+(`jam/metrics.hpp`), a headless conductor core with explicit SPSC edit/render
+queues (`native/`), and an Emscripten shell + page (`shell/`). Tests are
+`jam_tests` plus the native selftest and node shell smokes; the jam reuses
+`daw_demo`'s pure transport functions.
+
 Top-level `clockr` umbrella target (aliases `clockr::mem|conc|kernel|shell`).
+`clockr::replay` is deliberately opt-in and not part of the umbrella.
 First-party headers are quoted and namespaced (`#include
 "clockr/kernel/graph.hpp"`, `#include "clockr/kernel/debug_engine.hpp"`,
 `#include "clockr/shell/recipe.hpp"`); angle includes are reserved for
@@ -195,6 +213,10 @@ tree (`${CMAKE_INSTALL_INCLUDEDIR}` once installed).
   through spans and is producer-agnostic. `shell::recipe`s are a by-value
   `shell::node` arena (GLOSSARY.md `recipe`), not a `shared_ptr`
   tree.
+- Replay is **opt-in and non-core**: `clockr::replay` consumes the engine's
+  invariants but adds no evaluation semantics. It re-executes a boundary
+  journal into a fresh `program` through ordinary `engine::step`; it never
+  replays or reorders the lossy observer trace.
 - Design decisions live in `doc/`, not in commit messages: when changing
   architecture or temporal/state semantics, update the relevant doc and this
   file.

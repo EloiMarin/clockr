@@ -39,6 +39,11 @@ They never become kernel lookups.
 The kernel delegates all type correctness to the shell.
 This separation lets the shell change names or syntax without changing the semantics.
 
+`replay/` is a separate, opt-in module built only on the kernel.
+It records boundary journals, replays them into fresh programs, and compares
+runs; it is not a third semantic half and adds no evaluation semantics.
+See [Replay](#replay).
+
 ### host
 
 The host is application code that owns the threads and drives the library.
@@ -445,9 +450,87 @@ The observer is the debugging face of execution.
 For each epoch, it reports an ordered list.
 The list contains every node's value and is the observation map ω.
 The map is reported through `trace_sink` as `trace_event` values bracketed by region epoch.
-The trace is the replay log.
-Because state is data, time travel restores recorded values and re-steps.
+The trace is an **observation stream**, not replay history.
+It carries measured durations and a transport sequence, and a live sink may drop events by design.
+Replay re-executes the program; it never rearranges or replays trace events.
 `debug_engine` also captures a throwing node's fan-in for inspection.
+
+## Replay
+
+Replay is an opt-in capability, not part of the engine's core proposition.
+It consumes the engine's invariants — fresh-program construction, state-as-data,
+boundary-anchored clocks, explicit crossings, and determinism — but adds no
+evaluation semantics of its own.
+Link `clockr::replay` explicitly; the umbrella `clockr` target does not include it.
+
+### boundary journal
+
+A boundary journal is an ordered log of effective boundary operations, complete
+from a known initialization:
+initialization boundaries, input sets (grouped into per-clock epochs), region
+steps, and application marks.
+The journal records what entered the program and when it ticked.
+It does not record the node-evaluation trace.
+The replay core treats application marks as opaque.
+
+### scenario
+
+A scenario is an immutable boundary journal with identity.
+It carries a `run_id`, a `branch_id`, an optional parent run, and a cut entry
+for a branch.
+Entry ids are monotonic within a run and never reused.
+A scenario also carries **fidelity**: whether the journal is complete, how many
+entries are missing, and why.
+An incomplete scenario may replay, but its result must never be labelled exact.
+
+*Notes.*
+The code form is `clockr::replay::scenario`; `scenario_builder` assigns entry
+ids and epoch groups.
+Sets in one `epoch_group` form an unordered input map (L9a); a region step
+closes the group.
+The lossy live trace cannot substitute for a journal.
+
+### run
+
+A run is one execution of a scenario.
+It records one `step_record` per logical region step: the step identity, its
+display epoch, whether it threw, and the encoded outputs captured after the
+step.
+It may also carry a synchronously captured trace and the scenario's fidelity.
+A run is a semantic comparison artifact, not a trace replay.
+
+### branch
+
+A branch is a revision of a scenario with a parent and a cut entry.
+`branch_edit` inserts, removes, or replaces suffix entries; `apply_branch`
+derives a new scenario and never mutates the base.
+`replayer::replay_branch` replays the unchanged prefix, applies the edit, and
+continues the suffix.
+
+### logical step
+
+A logical step is `(region, ordinal)` within a run: the region's clock and how
+many times it has stepped.
+It is stable across a throwing tick, which publishes no epoch.
+An epoch is display and resampling metadata, never step identity.
+
+### replay
+
+Replay constructs a fresh `kernel::program` through a host `program_factory`,
+applies the journal's boundary operations in order, and calls the ordinary
+`engine::step(program, clock)` path.
+It does not implement a second evaluator.
+Journal user values travel as host-registered codec bytes and are decoded into
+the target program's region pools; the journal never retains a cell owned by a
+live or dead program.
+Comparison is semantic: by step, port/node/output, ignoring durations,
+sequence numbers, addresses, and `user_cell*` identity.
+
+*Notes.*
+The code forms are `clockr::replay::session` (recorder), `replayer`,
+`codec_registry` / `value_codec`, and `compare`.
+`native::recipe_factory<Recipe>` is the owning-program adapter.
+Prefix replay is the first checkpoint; direct state snapshots remain future work.
 
 ## Code map
 
@@ -474,6 +557,13 @@ Every name below is the canonical term in code form.
 | `boundary` | `shell::input` / `shell::output` |
 | `engine` | `kernel::engine`, `kernel::release_engine`; `kernel::step_hook` / `engine::set_step_hook` (the before/after seam, not the `observer`) |
 | `observer` | `kernel::debug_engine`; `trace_event` / `trace_sink` |
+| `boundary journal` | `clockr::replay::scenario`; `scenario_entry`; `session` |
+| `scenario` | `clockr::replay::scenario`, `scenario_builder`, `branch_edit`, `apply_branch` |
+| `run` | `clockr::replay::run`, `step_record`, `replayer` |
+| `branch` | `clockr::replay::branch_id`, `branch_edit`, `apply_branch`, `replayer::replay_branch` |
+| `logical step` | `clockr::replay::region_step_id` (`clock_tag`, ordinal) |
+| `fidelity` | `clockr::replay::fidelity` (`complete`, `missing_entries`, `reason`) |
+| `replay` | `clockr::replay::session` / `replayer` / `codec_registry` / `compare`; `native::recipe_factory` |
 | `tick function` | `node_descriptor::tick_fn`, invoked as `kernel::tick(node, ctx, inputs)` |
 
 ## Rejected vocabulary
@@ -489,3 +579,10 @@ Do not use them for new work.
 - **`resampler`, `channel`** — without qualification, these terms hide the intended level.
   Use `policy` or `crossing` for the static annotation.
   Use `link` for the runtime object.
+- **"trace replay", "replay log" for the observer trace** — the trace is an
+  observation stream and may be lossy; it carries measured durations and
+  transport sequence. Replay re-executes a boundary journal. Keep the live
+  recorder and the journal separate in code, names, and protocol.
+- **"history replay" (debug-client)** — that connect-time feature resends
+  traces to a new viewer. It does not re-execute a program; use `replay` only
+  for fresh-program scenario execution.
