@@ -76,6 +76,7 @@
         playOriginTime: 0,
         liveNodes: [],
         scrubbing: false,
+        playhead: 0,
     };
 
     async function boot() {
@@ -110,7 +111,9 @@
         const bar = Math.floor(beats / 4) + 1;
         const beat = (beats % 4) + 1;
         $("pos-value").textContent = `${bar}.${beat.toFixed(2)}`;
+        live.playhead = beats;
         updateCursors(beats, uiBeats);
+        updateSequencerCursor(beats);
         renderHistory(state);
     }
 
@@ -210,6 +213,8 @@
 
         if (live.selected)
             highlightSelection();
+
+        updateSequencerCursor(live.playhead);
     }
 
     function selectStep(trackIndex, step, pattern, cell) {
@@ -466,6 +471,25 @@
         $("cursor-ui").style.left = `${uiFraction * 100}%`;
     }
 
+    function updateSequencerCursor(beats) {
+        const rows = $("grid").querySelectorAll(".track-row");
+        const visible = !live.history && Number.isFinite(beats);
+
+        rows.forEach((row, trackIndex) => {
+            const track = live.state && live.state.score
+                ? live.state.score.tracks[trackIndex]
+                : null;
+            const pattern = track && live.state.score.patterns[track.pattern];
+            const length = pattern && pattern.length > 0 ? pattern.length : 16;
+            const gridStep = Math.floor(beats / 0.25 + 1e-9);
+            const local = visible ? ((gridStep % length) + length) % length : -1;
+
+            row.querySelectorAll(".step").forEach((step, stepIndex) => {
+                step.classList.toggle("playing", stepIndex === local);
+            });
+        });
+    }
+
     $("play-btn").addEventListener("click", async () => {
         const playing = !live.playing;
         setPlayLabel(playing);
@@ -515,7 +539,7 @@
             applyState(state);
             renderScore(state.score);
             await pushIntents();
-            showResult("Record: the journal restarted at the current score.");
+            showResult("New take: the journal restarted at the current score.");
         } catch (error) {
             report(error);
         }
