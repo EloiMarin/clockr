@@ -111,7 +111,8 @@ Public headers live in `include/clockr/`; `src/` holds the matching
 `doc/` — the design documents, organised by genre (reading map:
 `doc/README.md`): `doc/learn/` (newcomer walkthroughs: `layering.md`),
 `doc/explanation/` (rationale: `frp-decisions.md`,
-`operator-sufficiency.md`, and the branchable-live-jam design/plan), `doc/reference/`
+`operator-sufficiency.md`, and the branchable-live-jam design/plan/portable-IR
+track), `doc/reference/`
 (`denotational-semantics.md`), `doc/how-to/` (`consuming.md`, `ci.md`),
 `doc/examples/` (small host programs), and `doc/archive/` (delivered talks and
 history). The canonical

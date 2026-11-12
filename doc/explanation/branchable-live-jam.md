@@ -26,6 +26,11 @@ deterministic engine could provide.
 turns the phases below into file-level work for the core replay substrate and
 the web jam application.
 
+**Next direction:** [`branchable-live-jam-ir.md`](branchable-live-jam-ir.md)
+proposes portable program IRs so each participant can own a static recipe and
+input/gesture journal while every client runs every peer's graph. The current
+fixed-network sequencer is its first conformance target.
+
 **Companions:** `../reference/denotational-semantics.md` for the meaning of
 clocks, epochs, state, and crossings; `frp-decisions.md` for the clocked
 synchronous model and Shape C; `operator-sufficiency.md` for bounded dynamics

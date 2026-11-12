@@ -34,9 +34,11 @@ is it *allowed* to fall short.
 design for demonstrating scenario replay and branching through a shared musical
 performance with agent-reviewed alternatives, followed by a second-priority
 concurrent transport/event-interleaving workbench. Its
-[implementation plan](explanation/branchable-live-jam-plan.md) records the
+[`implementation plan`](explanation/branchable-live-jam-plan.md) records the
 landed replay substrate (`clockr::replay`), the jam domain, and the remaining
-gateway/MCP work.
+gateway/MCP work. Its next-direction companion,
+[`branchable-live-jam-ir.md`](explanation/branchable-live-jam-ir.md), designs a
+portable program IR for per-user recipes and input journals.
 
 **"I need the exact meaning."**
 [`reference/denotational-semantics.md`](reference/denotational-semantics.md)

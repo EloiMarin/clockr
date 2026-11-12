@@ -15,6 +15,10 @@ the jam is an example application that makes clockr's properties audible, not a
 redefinition of clockr's core proposition (real-time-safe concurrent
 coordination in audio software).
 
+A next-direction design for per-user, portable recipes and input journals is
+in [`branchable-live-jam-ir.md`](branchable-live-jam-ir.md). It leaves this
+plan's fixed-network scope intact and builds on the same replay substrate.
+
 ## 0. What this plan is for
 
 Two outcomes, in priority order:
